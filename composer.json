@@ -1,0 +1,17 @@
+{
+    "name": "rulatir/cdatify",
+    "description": "Wrap XML text nodes in CDATA after decoding entities",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Rulatir\\Cdatify\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Szczepan Hołyszewski",
+            "email": "rulatir@wp.pl"
+        }
+    ],
+    "require": {}
+}
