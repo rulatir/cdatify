@@ -13,5 +13,9 @@
             "email": "rulatir@wp.pl"
         }
     ],
-    "require": {}
+    "require": {
+        "vanilla/garden-cli": "^3.1",
+        "mschop/pathogen": "^0.7.1",
+        "ext-dom": "*"
+    }
 }
