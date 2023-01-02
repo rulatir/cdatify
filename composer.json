@@ -13,9 +13,23 @@
             "email": "rulatir@wp.pl"
         }
     ],
+    "autoload-dev": {
+        "psr-4": {
+            "Rulatir\\Cdatify\\": "tests/"
+        }
+    },
     "require": {
-        "vanilla/garden-cli": "^3.1",
         "mschop/pathogen": "^0.7.1",
-        "ext-dom": "*"
+        "ext-dom": "*",
+        "thunderer/shortcode": "^0.7.5",
+        "ivopetkov/html5-dom-document-php": "^2.4",
+        "league/flysystem": "^3.12",
+        "vanilla/garden-cli": "^3.1",
+        "ext-readline": "*",
+        "adhocore/cli": "^1.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "ext-xdebug": "*"
     }
 }

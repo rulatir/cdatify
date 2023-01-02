@@ -2,6 +2,11 @@
 
 use Garden\Cli\Args;
 use Garden\Cli\Cli;
+use League\Flysystem\Filesystem;
+use League\Flysystem\Local\LocalFilesystemAdapter;
+use Rulatir\Cdatify\Shortcode\AskerOfQuestionsCLI;
+use Rulatir\Cdatify\Shortcode\ParameterTranslationDeciderAnswerFile;
+use Rulatir\Cdatify\Shortcode\ShortcodeConverter;
 use Rulatir\Cdatify\Utility as Util;
 
 require __DIR__."/../vendor/autoload.php";
@@ -28,6 +33,19 @@ function process(Args $args, string $inputString) : void
         "xlf"=>cmd_xlf($inputString),
         default=>"Unknown command"
     };
+}
+
+function makeShortcodeConverter() : ShortcodeConverter
+{
+    $configDir = getenv('HOME')."/.local/cdatify/shortcode-schemas";
+    @mkdir($configDir, 0755, true);
+    return new ShortcodeConverter(
+        new ParameterTranslationDeciderAnswerFile(
+            'zuu-cms-shortcodes',
+            new Filesystem(new LocalFilesystemAdapter($configDir)),
+            new AskerOfQuestionsCLI()
+        )
+    );
 }
 
 function createCLI() : Cli
@@ -57,14 +75,15 @@ function cmd_html(string $inputString) : string
     $original = $file->getAttribute('original');
     $sourceLangauge = $file->getAttribute('source-langauge');
     $targetLanguage = $file->getAttribute('target-language');
+    $shortcodeConverter = makeShortcodeConverter();
     array_walk(
         $items,
-        function(DOMElement $src) use(&$result) {
+        function(DOMElement $src) use($shortcodeConverter, &$result) {
             if ($transUnit = getParentElement($src)) {
                 $result[] = [
                     'id' => $transUnit->getAttribute('id'),
                     'resname' => $transUnit->getAttribute('resname'),
-                    'value' => $src->textContent
+                    'value' => $shortcodeConverter->sc2html($src->textContent)
                 ];
             }
         }
@@ -80,6 +99,8 @@ function cmd_html(string $inputString) : string
 function cmd_xlf(string $inputString) : string
 {
     $dom = new DOMDocument('1.0','UTF-8');
+    $shortcodeConverter = makeShortcodeConverter();
+    $inputString = $shortcodeConverter->html2sc($inputString);
     $dom->loadHTML($inputString);
     $result = [];
     $items = array_filter(
