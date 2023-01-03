@@ -7,6 +7,7 @@ use DOMNode;
 use IvoPetkov\HTML5DOMDocument;
 use IvoPetkov\HTML5DOMElement;
 use Rulatir\Cdatify\Shortcode\Contracts\ParameterTranslationDecider;
+use Rulatir\Cdatify\Utility;
 use Thunder\Shortcode\Parser\RegularParser;
 use Thunder\Shortcode\Shortcode\ParsedShortcodeInterface;
 
@@ -73,24 +74,34 @@ class ShortcodeConverter
     public function html2sc(string $htmlWithEscapedShortcodes) : string
     {
         $document = new HTML5DOMDocument();
-        $document->loadHTML(implode("",[
-            '<!DOCTYPE html>',
-            '<html lang="en">',
-            '<head><meta charset="utf-8"><title>Processing container</title></head>',
-            '<body><section id="processing-container">'.$htmlWithEscapedShortcodes.'</section></body>',
-            '</html>'
-        ]));
+        $isAlreadyADocument = str_starts_with(mb_strtoupper(mb_substr($htmlWithEscapedShortcodes, 0, 50)), '<!DOCTYPE ');
+        $documentString = $isAlreadyADocument
+            ? $htmlWithEscapedShortcodes
+            : implode("", [
+                '<!DOCTYPE html>',
+                '<html lang="en">',
+                '<head><meta charset="utf-8"><title>Processing container</title></head>',
+                '<body><section id="processing-container">' . $htmlWithEscapedShortcodes . '</section></body>',
+                '</html>'
+            ]);
+
+        $document->loadHTML($documentString);
         /** @var HTML5DOMElement $container */
-        $container = $document->getElementById('processing-container');
+        $container = $isAlreadyADocument
+            ? $document->querySelector('body')
+            : $document->getElementById('processing-container');
         $this->unconvertChildren($document, $container);
-        return $container->innerHTML;
+        return $isAlreadyADocument ? $document->saveHTML() : $container->innerHTML;
     }
 
     protected function unconvertChildren(HTML5DOMDocument $document, HTML5DOMElement $element) : void
     {
         foreach(iterator_to_array($element->childNodes->getIterator()) as $childNode) {
             if (null!==$replacement=$this->unconvertElement($document, $childNode)) {
-                $childNode->parentNode->replaceChild($childNode, $replacement);
+                $childNode->parentNode->replaceChild($replacement, $childNode);
+            }
+            else if ($childNode instanceof HTML5DOMElement) {
+                $this->unconvertChildren($document, $childNode);
             }
         }
     }
@@ -105,13 +116,15 @@ class ShortcodeConverter
 
     protected function buildUnconvertedShortcode(HTML5DOMDocument $document, HTML5DOMElement $sc) : DOMDocumentFragment
     {
-        $name = $sc->querySelector('> scparamname')->getTextContent();
+        $name =
+        $name = Utility::firstChildByTagName($sc, 'scname')->getTextContent();
         $params = [];
-        foreach($sc->querySelectorAll('> scparam') as $paramElement) {
-            $params[$paramElement->querySelector('> scparamname')->getTextContent()]
-                = $paramElement->querySelector('> scparamvalue')?->getTextContent() ?? true;
+        /** @var HTML5DOMElement $paramElement */
+        foreach(Utility::childrenByTagName($sc, 'scparam') as $paramElement) {
+            $params[Utility::firstChildByTagName($paramElement, 'scparamname')?->getTextContent()]
+                = Utility::firstChildByTagName($paramElement, 'scparamvalue')?->getTextContent() ?? true;
         }
-        $haveContentElement = null !== $contentElement = $sc->querySelector('> sccontent');
+        $haveContentElement = null !== $contentElement = Utility::firstChildByTagName($sc, 'sccontent');
         if ($haveContentElement) {
             $this->unconvertChildren($document, $contentElement);
         }
@@ -126,7 +139,10 @@ class ShortcodeConverter
     ) : DOMDocumentFragment
     {
         $fragment = $document->createDocumentFragment();
-        if ($contentElement) foreach($fragment->childNodes as $child) $fragment->appendChild($child->cloneNode(true));
+        if ($contentElement) foreach($contentElement->childNodes as $child) {
+            $clonedChild = $child->cloneNode(true);
+            $fragment->appendChild($clonedChild);
+        }
         $renderedParameters = [];
         foreach($parameters as $name=>$value) {
             $renderedParameter = $name;

@@ -2,6 +2,7 @@
 
 use Garden\Cli\Args;
 use Garden\Cli\Cli;
+use IvoPetkov\HTML5DOMDocument;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use Rulatir\Cdatify\Shortcode\AskerOfQuestionsCLI;
@@ -96,12 +97,15 @@ function cmd_html(string $inputString) : string
     ]), $result]);
 }
 
+/**
+ * @throws Exception
+ */
 function cmd_xlf(string $inputString) : string
 {
-    $dom = new DOMDocument('1.0','UTF-8');
+    $dom = new HTML5DOMDocument('1.0','UTF-8');
     $shortcodeConverter = makeShortcodeConverter();
-    $inputString = $shortcodeConverter->html2sc($inputString);
-    $dom->loadHTML($inputString);
+    $shortcodedString = $shortcodeConverter->html2sc($inputString);
+    $dom->loadHTML($shortcodedString);
     $result = [];
     $items = array_filter(
         iterator_to_array($dom->getElementById('the-body')->childNodes),

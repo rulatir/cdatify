@@ -14,7 +14,7 @@ class Assembler
 
     public function appendUpTo(ParsedShortcodeInterface $shortcode) : void
     {
-        $this->chunks[] = substr(
+        $this->chunks[] = mb_substr(
             $this->originalString,
             $this->inputOffset,
             $shortcode->getOffset() - $this->inputOffset
@@ -24,11 +24,11 @@ class Assembler
     public function appendReplacement(ParsedShortcodeInterface $shortcode, string $replacement) : void
     {
         $this->chunks[] = $replacement;
-        $this->inputOffset = $shortcode->getOffset() + strlen($shortcode->getText());
+        $this->inputOffset = $shortcode->getOffset() + mb_strlen($shortcode->getText());
     }
 
     public function getText() : string
     {
-        return implode("",$this->chunks).substr($this->originalString,$this->inputOffset);
+        return implode("",$this->chunks).mb_substr($this->originalString,$this->inputOffset);
     }
 }

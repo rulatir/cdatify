@@ -4,6 +4,8 @@ namespace Rulatir\Cdatify;
 
 use DOMElement;
 use DOMNode;
+use IvoPetkov\HTML5DOMElement;
+use Thunder\Shortcode\Shortcode\ParsedShortcode;
 
 final class Utility
 {
@@ -23,6 +25,38 @@ final class Utility
             [self::class, 'numeric_entity'],
             $str
         );
+    }
+
+    public static function childrenWhere(HTML5DOMElement $element, callable $predicate) : \Generator
+    {
+        foreach($element->childNodes as $childNode) if ($predicate($childNode)) yield $childNode;
+    }
+
+    public static function firstChildWhere(HTML5DOMElement $element, callable $predicate) : ?DOMNode
+    {
+        foreach (self::childrenWhere($element, $predicate) as $first) return $first;
+        return null;
+    }
+
+    /**
+     * @param HTML5DOMElement $element
+     * @param string $tagName
+     * @return \Generator<HTML5DOMElement>
+     */
+    public static function childrenByTagName(HTML5DOMElement $element, string $tagName) : \Generator
+    {
+        yield from self::childrenWhere($element, fn($v) => $v->tagName===$tagName);
+    }
+
+    public static function firstChildByTagName(HTML5DOMElement $element, string $tagName) : ?HTML5DOMElement
+    {
+        $result = self::firstChildWhere($element, fn($v) => $v->tagName===$tagName);
+        return $result instanceof HTML5DOMElement ? $result : null;
+    }
+
+    public static function assertValidShortcode(ParsedShortcode $shortcode, string $originalString) : void
+    {
+        assert($shortcode->getText() === substr($originalString, $shortcode->getOffset(), strlen($shortcode->getText())));
     }
 
     public static function numeric_entity(array $matches) : string
@@ -283,4 +317,5 @@ final class Utility
         ];
         return $map[$matches[1]] ?: $matches[0];
     }
+
 }
