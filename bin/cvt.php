@@ -74,7 +74,7 @@ function cmd_html(string $inputString) : string
     $items = iterator_to_array($dom->getElementsByTagName('source'));
     $file = $dom->getElementsByTagName('file')[0];
     $original = $file->getAttribute('original');
-    $sourceLangauge = $file->getAttribute('source-langauge');
+    $sourceLanguage = $file->getAttribute('source-language');
     $targetLanguage = $file->getAttribute('target-language');
     $shortcodeConverter = makeShortcodeConverter();
     array_walk(
@@ -92,7 +92,7 @@ function cmd_html(string $inputString) : string
     /** @noinspection PhpParamsInspection */
     return renderTemplate(...[...htmlTemplate([
         '%%%original%%%' => $original,
-        '%%%source-language%%%' => $sourceLangauge,
+        '%%%source-language%%%' => $sourceLanguage,
         '%%%target-language%%%' => $targetLanguage
     ]), $result]);
 }
@@ -113,7 +113,7 @@ function cmd_xlf(string $inputString) : string
     );
     $body = $dom->getElementById('the-body');
     $original = $body->getAttribute('data-original');
-    $sourceLangauge = $body->getAttribute('data-source-langauge');
+    $sourceLangauge = $body->getAttribute('data-source-language');
     $targetLanguage = $body->getAttribute('data-target-language');
     array_walk(
         $items,
