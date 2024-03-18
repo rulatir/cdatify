@@ -2,18 +2,17 @@
 
 namespace Rulatir\Cdatify;
 
-use DOMElement;
-use DOMNode;
-use IvoPetkov\HTML5DOMElement;
+use DOMNode as Node;
+use DOMElement as Element;
 use Thunder\Shortcode\Shortcode\ParsedShortcode;
 
 final class Utility
 {
-    public static function innerHTML(DOMElement $elt) : string
+    public static function innerHTML(Element $elt) : string
     {
         $dom = $elt->ownerDocument;
         return implode("",array_map(
-            fn(DOMNode $node) : string => $dom->saveHTML($node),
+            fn(Node $node) : string => $dom->saveHTML($node),
             iterator_to_array($elt->childNodes)
         ));
     }
@@ -27,31 +26,30 @@ final class Utility
         );
     }
 
-    public static function childrenWhere(HTML5DOMElement $element, callable $predicate) : \Generator
+    public static function children(Element $element, callable $predicate) : \Generator
     {
         foreach($element->childNodes as $childNode) if ($predicate($childNode)) yield $childNode;
     }
 
-    public static function firstChildWhere(HTML5DOMElement $element, callable $predicate) : ?DOMNode
+    public static function child(Element $element, callable $predicate) : ?Node
     {
-        foreach (self::childrenWhere($element, $predicate) as $first) return $first;
+        foreach (self::children($element, $predicate) as $first) return $first;
         return null;
     }
 
+
     /**
-     * @param HTML5DOMElement $element
-     * @param string $tagName
-     * @return \Generator<HTML5DOMElement>
+     * @return \Generator<Element>
      */
-    public static function childrenByTagName(HTML5DOMElement $element, string $tagName) : \Generator
+    public static function childrenByTagName(Element $element, string $tagName) : \Generator
     {
-        yield from self::childrenWhere($element, fn($v) => $v->tagName===$tagName);
+        yield from self::children($element, fn($v) => $v->tagName===$tagName);
     }
 
-    public static function firstChildByTagName(HTML5DOMElement $element, string $tagName) : ?HTML5DOMElement
+    public static function childByTagName(Element $element, string $tagName) : ?Element
     {
-        $result = self::firstChildWhere($element, fn($v) => $v->tagName===$tagName);
-        return $result instanceof HTML5DOMElement ? $result : null;
+        $result = self::child($element, fn($v) => $v->tagName===$tagName);
+        return $result instanceof Element ? $result : null;
     }
 
     public static function assertValidShortcode(ParsedShortcode $shortcode, string $originalString) : void
