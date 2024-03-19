@@ -204,7 +204,7 @@ class ShortcodeConverter
     {
         foreach(pieces($element->contents()) as $childNode) {
             if (null!==$replacement=$this->unconvertElement($document, $childNode)) {
-                foreach(pieces($replacement) as $piece) $piece->insertBefore($childNode[0]);
+                foreach(pieces($replacement) as $piece) $childNode->parent()->insertBefore($piece[0], $childNode[0]);
                 $childNode->destroy();
             }
             else if ($childNode[0] instanceof Element) {

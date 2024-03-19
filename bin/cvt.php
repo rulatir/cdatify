@@ -73,7 +73,7 @@ function cmd_html(string $inputString, bool $useLongTags, bool $mergeDuplicates)
     [
         'original'=> $original,
         'source-language' => $sourceLanguage,
-        'target-language'=>$targetLanguage
+        'target-language'=>$targetLanguage,
     ]
         = $files[0]['attr'];
 
@@ -82,7 +82,7 @@ function cmd_html(string $inputString, bool $useLongTags, bool $mergeDuplicates)
     $result = array_map(
         fn($unit) => [
             'id' => $unit['attr']['id'],
-            'resname' => $unit['attr']['id'],
+            'resname' => $unit['attr']['resname'],
             'value' => $shortcodeConverter->sc2html(htmlspecialchars_decode($unit['source']['raw-content']))
         ],
         array_merge(...array_map(fn($f) => array_values($f['trans-units']),$files))
@@ -92,7 +92,7 @@ function cmd_html(string $inputString, bool $useLongTags, bool $mergeDuplicates)
         '%%%original%%%' => $original,
         '%%%source-language%%%' => $sourceLanguage,
         '%%%target-language%%%' => $targetLanguage,
-        '%%%use-long-tags%%%' => $useLongTags
+        '%%%use-long-tags%%%' => $useLongTags ? "yes" : "no"
     ];
     /** @noinspection PhpParamsInspection */
     return
