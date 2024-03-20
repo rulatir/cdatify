@@ -2,11 +2,10 @@
 
 namespace Rulatir\Cdatify\Shortcode;
 
-use DOMAttr;
-use DOMWrap\Element;
-use DOMWrap\Document;
-use DomWrap\NodeList;
+use Masterminds\HTML5;
+use QueryPath\DOMQuery as DQ;
 use Rulatir\Cdatify\Shortcode\Contracts\ParameterTranslationDecider;
+use Rulatir\Cdatify\Utility;
 use Thunder\Shortcode\Parser\RegularParser;
 use Thunder\Shortcode\Shortcode\ParsedShortcodeInterface;
 
@@ -46,8 +45,13 @@ class ShortcodeConverter
         if (null===$html) return null;
         $container = $this->documentify($html);
         $this->avatifyChildren($container);
+        foreach(pieces($container->contents()->filterCallback(fn($n,$e)=>$e instanceof \DOMText)) as $t) {
+             $t->replaceWith(normalizeTextContentForTranslation($t->text()));
+        }
         return $this->undocumentify($container);
     }
+
+
 
     public function avat2html(?string $avat) : ?string
     {
@@ -58,53 +62,50 @@ class ShortcodeConverter
         return $result;
     }
 
-    protected function avatifyChildren(Document|NodeList $container) : void
+    protected function avatifyChildren(DQ $container) : void
     {
         foreach(pieces($container->children()) as $node) {
-            $node->substituteWith($this->avatify($node));
+            Utility::pasteOver($node, $this->avatify($node));
         }
     }
 
-    protected function unavatifyChildren(Document|NodeList $container) : void
+    protected function unavatifyChildren(DQ $container) : void
     {
         foreach(pieces($container->children()) as $node) {
-            $node->substituteWith($this->unavatify($node));
+            Utility::pasteOver($node, $this->unavatify($node));
         }
     }
 
-    protected function avatify(Document|NodeList $elt) : Document|NodeList
+    protected function avatify(DQ $elt) : DQ
     {
-        $doc = $elt[0]->ownerDocument;
+        $doc = $elt->document();
         $this->avatifyChildren($elt);
         $translate =  $elt->attr('translate')==='no' ? ' translate="no"' : "";
-        $chunks = ["<ft-t{$translate}><ft-n translate=\"no\">{$elt[0]->tagName}</ft-n>"];
-        foreach($elt->attributes as $name=>$attr) {
-            $translate = $name==='title' ? "" : ' translate="no"';
-            $chunks[]="<ft-a><ft-an translate='\"no\"'>$name</ft-an><ft-av{$translate}>{$attr->value}</ft-av></ft-a>";
+        $chunks = ["<ft-t{$translate}> <ft-n translate=\"no\">{$elt->tag()}</ft-n> "];
+        foreach($elt->attr() as $name=>$attr) {
+            $should = $name==='title';
+            $translate = $should ? "" : ' translate="no"';
+            $chunks[]=" <ft-a> <ft-an translate=\"no\">$name</ft-an> <ft-av{$translate}>{$attr}</ft-av> </ft-a> ";
         }
-        if ("" !== $html=$elt->html())
-            $chunks[]="<ft-c>$html</ft-c>";
-        return FQ($doc->create(implode("",[...$chunks,'</ft-t>'])));
+        if ("" !== $html=$elt->innerHTML5())
+            $chunks[]=" <ft-c>".normalizeTextContentForTranslation($html)."</ft-c> ";
+        return QQ(implode("",[...$chunks,'</ft-t>']));
     }
 
-    protected function unavatify(Document|NodeList $elt) : Document|NodeList
+    protected function unavatify(DQ $elt) : DQ
     {
         $this->unavatifyChildren($elt);
-        if ('ft-t'!==$elt[0]->tagName) return $elt;
-        $allChildren = $elt->children();
-        $children = $elt->children('ft-n');
-        $filtered = $allChildren->filter('ft-n');
-        $first = $children->eq(0);
-        $tagName = $first->textContent;
-        $replacement = $elt->create("<$tagName></$tagName>");
-        /** @var Element $attributeNode */
-        foreach(pieces($elt->find('fa','child::')) as $attributeNode) {
+        if($elt->is('md-star')) return QQ("*{$elt->innerHTML5()}*");
+        if (!$elt->is('ft-t')) return $elt;
+        $tagName = $elt->find('> ft-n')->text();
+        $replacement = QQ("<$tagName></$tagName>");
+        foreach(pieces($elt->find('> fa')) as $attributeNode) {
             $replacement->attr(
-                $attributeNode->find('ft-an','child::')->text(),
-                $attributeNode->find('ft-av','child::')->text()
+                $attributeNode->find('> ft-an')->text(),
+                $attributeNode->find('>  ft-av')->text()
             );
         }
-        $elt->find('ft-c','child::')->contents()->detach()->appendTo($replacement);
+        $elt->find('> ft-c')->contents()->detach()->appendTo($replacement);
         return $replacement;
     }
 
@@ -150,17 +151,17 @@ class ShortcodeConverter
                         : "<{$T['scparamvalue']} translate=\"no\">$value</{$T['scparamvalue']}>"
                 );
 
-        return "<{$T['scparam']}>{$nameTag}{$valueTag}</{$T['scparam']}>";
+        return " <{$T['scparam']}> {$nameTag} {$valueTag} </{$T['scparam']}> ";
     }
 
     protected function renderConvertedShortcode(string $name, array $convertedParams, ?string $convertedContent) : string
     {
         $T=$this->getTagMap();
         return implode("", array_filter([
-            "<{$T['sc']}><{$T['scname']} translate=\"no\">$name</{$T['scname']}>",
+            "<{$T['sc']}> <{$T['scname']} translate=\"no\">$name</{$T['scname']}> ",
             ...$convertedParams,
-            $convertedContent ? "<{$T['sccontent']}>$convertedContent</{$T['sccontent']}>" : null,
-            "</{$T['sc']}>"
+            $convertedContent ? " <{$T['sccontent']}>$convertedContent</{$T['sccontent']}> " : null,
+            " </{$T['sc']}>"
         ]));
     }
 
@@ -168,17 +169,16 @@ class ShortcodeConverter
      * Loads string into document object, wrapping it in a document template if it is not already a full document.
      * Returns the element that serves as the processing container for the content
      */
-    protected function documentify(string $html) : Document|NodeList
+    protected function documentify(string $html) : DQ
     {
         $isAlreadyADocument = str_starts_with(mb_strtoupper(mb_substr($html, 0, 50)), '<!DOCTYPE ');
-        $document = new Document();
-        $document->html(
+        $document = html5qp(
             $isAlreadyADocument
                 ? $html
                 : implode("", [
                 '<!DOCTYPE html>',
                 '<html lang="en">',
-                '<head><meta charset="utf-8"><title>Processing container</title></head>',
+                '<head><meta charset="UTF-8"><title>Processing container</title></head>',
                 '<body><section id="processing-container">' . $html . '</section></body>',
                 '</html>'
             ])
@@ -186,81 +186,76 @@ class ShortcodeConverter
         return $document->find($isAlreadyADocument ? 'body' : '#processing-container');
     }
 
-    protected function undocumentify(Document|NodeList $container) : string
+    protected function undocumentify(DQ $container) : string
     {
-        return 'body'===$container[0]->tagName ? $container[0]->ownerDocument->saveHTML() : $container->html();
+        return $container->innerHTML5();
     }
 
     public function html2sc(string $htmlWithEscapedShortcodes) : string
     {
         $container = $this->documentify($htmlWithEscapedShortcodes);
-        $this->unconvertChildren($container[0]->ownerDocument, $container);
+        $this->unconvertChildren($container);
         $unconverted = $this->undocumentify($container);
         return $this->avat2html($unconverted);
     }
 
 
-    protected function unconvertChildren(Document $document, Document|NodeList $element) : void
+    protected function unconvertChildren(DQ $element) : void
     {
+        $document = $element->document();
         foreach(pieces($element->contents()) as $childNode) {
-            if (null!==$replacement=$this->unconvertElement($document, $childNode)) {
-                foreach(pieces($replacement) as $piece) $childNode->parent()->insertBefore($piece[0], $childNode[0]);
-                $childNode->destroy();
+            if (null!==$replacement=$this->unconvertElement($childNode)) {
+                $childNode->replaceWith($replacement);
             }
-            else if ($childNode[0] instanceof Element) {
-                $this->unconvertChildren($document, $childNode);
+            else if ($childNode->get(0) instanceof \DOMElement) {
+                $this->unconvertChildren($childNode);
             }
         }
     }
 
-    protected function unconvertElement(Document $document, Document|NodeList $node) : ?NodeList
+    protected function unconvertElement(DQ $node) : ?DQ
     {
-        if ($node[0]->tagName===$this->getTagMap()['sc']) {
-            return $this->buildUnconvertedShortcode($document, $node);
-        }
-        return null;
+        return $node->is($this->getTagMap()['sc'])
+            ? $this->buildUnconvertedShortcode($node)
+            : null;
     }
 
-    protected function buildUnconvertedShortcode(Document $document, Document|NodeList $sc) : NodeList
+    protected function buildUnconvertedShortcode(DQ $sc) : DQ
     {
         $T=$this->getTagMap();
-        $name = $sc->find($T['scname'],'child::')->first()->text();
+        $name = $sc->find('> '.$T['scname'])->first()->text();
         $params = [];
-        foreach(pieces($sc->find($T['scparam'],'child::')) as $paramElement) {
-            $params[$paramElement->find($T['scparamname'],'child::')->text()]
-                = $paramElement->find($T['scparamvalue'],'child::')->text();
+        foreach(pieces($sc->find('> '.$T['scparam'])) as $paramElement) {
+            $params[$paramElement->find('> '.$T['scparamname'])->text()]
+                = $paramElement->find('> '.$T['scparamvalue'])->text();
         }
-        if (($contentElement = $sc->find($T['sccontent'],'child::'))->count()) {
-            $this->unconvertChildren($document, $contentElement);
+        if (($contentElement = $sc->find('> '.$T['sccontent']))->count()) {
+            $this->unconvertChildren($contentElement);
         }
-        return $this->renderUnconvertedShortcode($document, $name, $params, $contentElement);
+        return $this->renderUnconvertedShortcode($name, $params, $contentElement);
     }
 
     protected function renderUnconvertedShortcode(
-        Document $document,
         string $shortcodeName,
-        array $parameters,
-        Document|NodeList $contentElement
-    ) : NodeList
+        array  $parameters,
+        DQ     $contentElement
+    ) : DQ
     {
-        $fragment = $document->createDocumentFragment();
-        if ($contentElement->count()) foreach(pieces($contentElement->contents()) as $child) {
-            $clonedChild = $child[0]->cloneNode(true);
-            $fragment->appendChild($clonedChild);
-        }
         $renderedParameters = [];
         foreach($parameters as $name=>$value) {
             $renderedParameter = $name;
             if ($value !== true) $renderedParameter .= "=\"$value\"";
             $renderedParameters[] = $renderedParameter;
         }
-        $openingShortcode = implode("",[
+        $shortcode = [
             "[",
             implode(" ",[$shortcodeName, ...$renderedParameters]),
             "]"
-        ]);
-        $fragment->prepend($document->createTextNode($openingShortcode));
-        if ($contentElement->count()) $fragment->append($document->createTextNode("[/$shortcodeName]"));
-        return new NodeList($document, $fragment->childNodes);
+        ];
+        if ($contentElement->length) {
+            $shortcode[] = $contentElement->innerHTML5();
+            $shortcode[]="[/$shortcodeName]";
+        }
+        return QQ(implode("",$shortcode));
     }
 }

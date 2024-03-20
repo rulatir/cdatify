@@ -37,7 +37,9 @@
         "adhocore/cli": "^1.2",
         "cocur/slugify": "^4.5",
         "scotteh/php-dom-wrapper": "^3.0",
-        "matecat/xliff-parser": "dev-master"
+        "matecat/xliff-parser": "dev-master",
+        "ext-libxml": "*",
+        "gravitypdf/querypath": "^3.2"
     },
     "require-dev": {
         "phpunit/phpunit": "^11",

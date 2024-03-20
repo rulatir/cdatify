@@ -9,7 +9,7 @@ class DomWrapperSuitability extends TestCase
 {
     public function testChildrenFind() : void
     {
-        $doc = new Document();
+        $doc = Utility::mkdoc();
         $html = <<<HTML
 <article id="root">
     <div>Not section</div>
@@ -66,11 +66,23 @@ HTML;
 
     public function testExternalAppend() : void
     {
-        $doc = new Document();
+        $doc = Utility::mkdoc();
         $doc->html($html="<!DOCTYPE html>\n<html lang=\"pl\"><head><title>Test</title></head><body></body></html>\n");
         $doc->find('body')->appendWith('<p>Paragraph</p>');
         $this->assertEquals(
             str_replace('<body>','<body><p>Paragraph</p>',$html),
+            $doc->saveHTML()
+        );
+    }
+
+    public function testExternalAppendText(): void
+    {
+        $doc = Utility::mkdoc();
+        $doc->setHtml("xxx");
+        $doc->html($html="<!DOCTYPE html>\n<html lang=\"pl\"><head><title>Test</title></head><body></body></html>\n");
+        $doc->find('body')->appendWith('Some text <p>Paragraph</p> more text');
+        $this->assertEquals(
+            str_replace('<body>','<body>Some text <p>Paragraph</p> more text',$html),
             $doc->saveHTML()
         );
     }

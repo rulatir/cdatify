@@ -4,6 +4,9 @@ namespace Rulatir\Cdatify;
 
 use DOMNode as Node;
 use DOMElement as Element;
+use DOMWrap\Document;
+use DOMWrap\Text;
+use QueryPath\DOMQuery as DQ;
 use Thunder\Shortcode\Shortcode\ParsedShortcode;
 
 final class Utility
@@ -55,6 +58,14 @@ final class Utility
     public static function assertValidShortcode(ParsedShortcode $shortcode, string $originalString) : void
     {
         assert($shortcode->getText() === substr($originalString, $shortcode->getOffset(), strlen($shortcode->getText())));
+    }
+
+    public static function substituteWithHTML(\DOMWrap\Element|Text $t, string $html) : void
+    {
+        $t->collection()->create($html)->each(function($piece) use($t) {
+            $t->parent()->insertBefore($piece,$t);
+        });
+        $t->destroy();
     }
 
     public static function numeric_entity(array $matches) : string
@@ -316,4 +327,25 @@ final class Utility
         return $map[$matches[1]] ?: $matches[0];
     }
 
+    public static function mkdoc() : Document
+    {
+        $doc = new Document();
+        $doc->setLibxmlOptions(LIBXML_HTML_NOIMPLIED|LIBXML_HTML_NODEFDTD);
+        return $doc;
+    }
+    public static function capture(callable $callback) : string
+    {
+        try {
+            ob_start();
+            $callback();
+        }
+        finally {
+            return ob_get_clean();
+        }
+    }
+    public static function pasteOver(DQ $old, DQ $new) : void
+    {
+        foreach($new as $node) $node->insertBefore($old->eq(0));
+        $old->remove();
+    }
 }
