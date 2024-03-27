@@ -74,20 +74,30 @@ function splitDuplicates(array $items) : array
 
 function normalizeTextContentForTranslation(string $text) : string
 {
+    $text = normalizePipes($text);
     /** @noinspection PhpUnnecessaryLocalVariableInspection */
-    $text = normalizeStars($text);
+    $text = normalizeStars($text,'%');
     return $text;
 }
 
-function normalizeStars(string $text) : string
+function normalizePipes(string $text) : string
+{
+    return implode(" ",preg_split(/** @lang regex */ '/\s*\|+\s*/', $text));
+}
+
+function normalizeStars(string $text, string $template = '<md-star>%</md-star>') : string
 {
     return preg_replace_callback(
         '/(?:\\w|[*])+/u',
-        function(array $matches) : string{
+        function(array $matches) use ($template): string{
             if(!str_contains($matches[0],'*')) return $matches[0];
             if(str_contains($matches[0],'**')) return $matches[0];
             if(substr_count($matches[0],'*') % 2 === 0) {
-                return '<md-star>'.str_replace('*','',$matches[0]).'</md-star>';
+                return str_replace(
+                    '%',
+                    str_replace('*','',$matches[0]),
+                    $template
+                );
             }
             return $matches[0];
         },

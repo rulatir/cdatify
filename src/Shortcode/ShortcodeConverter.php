@@ -2,10 +2,12 @@
 
 namespace Rulatir\Cdatify\Shortcode;
 
-use Masterminds\HTML5;
+use DOMElement as Elt;
+use DOMText as Text;
 use QueryPath\DOMQuery as DQ;
 use Rulatir\Cdatify\Shortcode\Contracts\ParameterTranslationDecider;
 use Rulatir\Cdatify\Utility;
+use Thunder\Shortcode\Parser\ParserInterface;
 use Thunder\Shortcode\Parser\RegularParser;
 use Thunder\Shortcode\Shortcode\ParsedShortcodeInterface;
 
@@ -31,7 +33,11 @@ class ShortcodeConverter
         'scparamvalue' => 'sc-pv'
     ];
 
-    public function __construct(protected ParameterTranslationDecider $decider, protected bool $useLongTags=false)
+    public function __construct(
+        protected ParserInterface $shortcodeParser,
+        protected ParameterTranslationDecider $decider,
+        protected bool $useLongTags=false
+    )
     {
     }
 
@@ -45,13 +51,11 @@ class ShortcodeConverter
         if (null===$html) return null;
         $container = $this->documentify($html);
         $this->avatifyChildren($container);
-        foreach(pieces($container->contents()->filterCallback(fn($n,$e)=>$e instanceof \DOMText)) as $t) {
-             $t->replaceWith(normalizeTextContentForTranslation($t->text()));
-        }
+        $container->contents()->filterCallback(fn($n,$e)=>$e instanceof Text)->eachQ(function($n,$t){
+            Utility::pasteOver($t, QQ(normalizeTextContentForTranslation($t->text())));
+        });
         return $this->undocumentify($container);
     }
-
-
 
     public function avat2html(?string $avat) : ?string
     {
@@ -65,46 +69,60 @@ class ShortcodeConverter
     protected function avatifyChildren(DQ $container) : void
     {
         foreach(pieces($container->children()) as $node) {
-            Utility::pasteOver($node, $this->avatify($node));
+            if ($replacement = $this->avatify($node)) {
+                Utility::pasteOver($node, $replacement);
+            }
         }
     }
 
     protected function unavatifyChildren(DQ $container) : void
     {
-        foreach(pieces($container->children()) as $node) {
-            Utility::pasteOver($node, $this->unavatify($node));
-        }
+        $container->children()->eachQ(function($n, DQ $node)  {
+            if ($node->tag()==='ft-t') {
+                Utility::pasteOver($node,$this->unavatify($node));
+            }
+            else {
+                $this->unavatifyChildren($node);
+            }
+        });
     }
 
-    protected function avatify(DQ $elt) : DQ
+    protected function avatify(DQ $elt) : ?DQ
     {
-        $doc = $elt->document();
         $this->avatifyChildren($elt);
         $translate =  $elt->attr('translate')==='no' ? ' translate="no"' : "";
         $chunks = ["<ft-t{$translate}> <ft-n translate=\"no\">{$elt->tag()}</ft-n> "];
+        $need = false;
         foreach($elt->attr() as $name=>$attr) {
+            if ($this->containsShortcodes($attr)) {
+                $need = true;
+            }
             $should = $name==='title';
             $translate = $should ? "" : ' translate="no"';
             $chunks[]=" <ft-a> <ft-an translate=\"no\">$name</ft-an> <ft-av{$translate}>{$attr}</ft-av> </ft-a> ";
         }
+        if (!$need) return null;
         if ("" !== $html=$elt->innerHTML5())
             $chunks[]=" <ft-c>".normalizeTextContentForTranslation($html)."</ft-c> ";
         return QQ(implode("",[...$chunks,'</ft-t>']));
     }
 
-    protected function unavatify(DQ $elt) : DQ
+    protected function containsShortcodes(string $text) : bool
+    {
+        return count($this->shortcodeParser->parse($text)) > 0;
+    }
+
+    protected function unavatify(DQ $elt) : ?DQ
     {
         $this->unavatifyChildren($elt);
-        if($elt->is('md-star')) return QQ("*{$elt->innerHTML5()}*");
-        if (!$elt->is('ft-t')) return $elt;
         $tagName = $elt->find('> ft-n')->text();
         $replacement = QQ("<$tagName></$tagName>");
-        foreach(pieces($elt->find('> fa')) as $attributeNode) {
-            $replacement->attr(
-                $attributeNode->find('> ft-an')->text(),
-                $attributeNode->find('>  ft-av')->text()
+        $attributes = $elt->find('> ft-a')
+            ->mapQToArr(fn($k,DQ $attr) => [
+                $attr->find('> ft-an')->text(),
+                $attr->find('> ft-av')->text()]
             );
-        }
+        foreach($attributes as [$k,$v]) $replacement->attr($k,$v);
         $elt->find('> ft-c')->contents()->detach()->appendTo($replacement);
         return $replacement;
     }
@@ -113,13 +131,13 @@ class ShortcodeConverter
     {
         if (null===$htmlWithShortcodes) return null;
         $avatWithShortcodes = $this->html2avat($htmlWithShortcodes);
-        $parser = new RegularParser();
         $assembler = new Assembler($avatWithShortcodes);
-        $shortcodes = $parser->parse($avatWithShortcodes);
+        $shortcodes = $this->shortcodeParser->parse($avatWithShortcodes);
         foreach($shortcodes as $shortcode) {
             $assembler->appendUpTo($shortcode);
             $assembler->appendReplacement($shortcode, $this->convertShortcode($shortcode));
         }
+        
         return $assembler->getText();
     }
 
@@ -146,7 +164,7 @@ class ShortcodeConverter
             null === $value
                 ? ""
                 : (
-                    $this->decider->shouldTranslate($shortcodeName, $paramName, $shortcodeText)
+                    $this->decider->shouldTranslateParameter($shortcodeName, $paramName, $shortcodeText)
                         ? "<{$T['scparamvalue']}>$value</{$T['scparamvalue']}>"
                         : "<{$T['scparamvalue']} translate=\"no\">$value</{$T['scparamvalue']}>"
                 );
@@ -172,18 +190,11 @@ class ShortcodeConverter
     protected function documentify(string $html) : DQ
     {
         $isAlreadyADocument = str_starts_with(mb_strtoupper(mb_substr($html, 0, 50)), '<!DOCTYPE ');
-        $document = html5qp(
+        $input =
             $isAlreadyADocument
                 ? $html
-                : implode("", [
-                '<!DOCTYPE html>',
-                '<html lang="en">',
-                '<head><meta charset="UTF-8"><title>Processing container</title></head>',
-                '<body><section id="processing-container">' . $html . '</section></body>',
-                '</html>'
-            ])
-        );
-        return $document->find($isAlreadyADocument ? 'body' : '#processing-container');
+                : "<processing-container>$html</processing-container>";
+        return html5qp($input)->find($isAlreadyADocument ? 'body' : 'processing-container');
     }
 
     protected function undocumentify(DQ $container) : string
@@ -202,20 +213,19 @@ class ShortcodeConverter
 
     protected function unconvertChildren(DQ $element) : void
     {
-        $document = $element->document();
-        foreach(pieces($element->contents()) as $childNode) {
-            if (null!==$replacement=$this->unconvertElement($childNode)) {
-                $childNode->replaceWith($replacement);
+        $element->children()->eachQ(function($n, DQ $child) {
+            if ($child->tag()==='sc-t') {
+                Utility::pasteOver($child, $this->buildUnconvertedShortcode($child));
             }
-            else if ($childNode->get(0) instanceof \DOMElement) {
-                $this->unconvertChildren($childNode);
+            else {
+                $this->unconvertChildren($child);
             }
-        }
+        });
     }
 
     protected function unconvertElement(DQ $node) : ?DQ
     {
-        return $node->is($this->getTagMap()['sc'])
+        return $node->is('> '.$this->getTagMap()['sc'])
             ? $this->buildUnconvertedShortcode($node)
             : null;
     }

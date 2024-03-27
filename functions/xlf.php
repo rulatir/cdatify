@@ -16,21 +16,21 @@ function parseItems(array $items) : array
     );
 }
 
-function parseDuplicateSets(array $duplicateSets) : array
+function parseDuplicateSets(DQ $duplicateSets) : array
 {
-    return array_merge(...array_map(
-        fn(DQ $duplicateSet) : array => array_map(
-            function(DQ $id) use($duplicateSet) : array {
-                return [
-                    'id' => $id->getAttribute('data-loco-id'),
-                    'resname' => $id->getAttribute('data-resname'),
-                    'value' => Util::numeric_entities(QQ($duplicateSet)->find('> .value')->first()->innerHTML5())
-                ];
-            },
-            iterator_to_array($duplicateSet->find('> ul.ids > li'))
-        ),
-        $duplicateSets
-    ));
+    $result=[];
+    $duplicateSets->each(function($n, DOMElement $ds_) use(&$result) {
+        $ds = QQ($ds_);
+        $value = $ds->find('> .value')->innerHTML5();
+        $ds->find('> ul.ids > li')->each(function($n, DOMElement $id) use (&$result,$value) {
+             $result[] = [
+                 'id' => $id->getAttribute('data-loco-id'),
+                 'resname' => $id->getAttribute('data-resname'),
+                 'value' => $value
+             ];
+        });
+    });
+    return $result;
 }
 
 /**
@@ -48,7 +48,7 @@ function cmd_xlf(string $inputString) : string
 
     $shortcodeConverter = makeShortcodeConverter($useLongTags);
     $dom = html5qp($inputString);
-    $items = iterator_to_array(pieces($dom->find('body > section')));
+    $items = $dom->find('body > section');
     $data = $mergeDuplicates ? parseDuplicateSets($items) : parseItems($items);
     $data = array_map(fn($item) => [
         ...$item,

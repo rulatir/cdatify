@@ -32,7 +32,7 @@ function cmd_fix_slugs(array $input, string $inputLang, array $source, string $s
         }
     }
     $result = var_export($input, true);
-    return $result;
+    return "<?php\nreturn $result;\n";
 }
 
 function hash_slugify(string $v, Slugify $slugify) : array

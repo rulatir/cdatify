@@ -68,4 +68,20 @@ HTML;
         $expected = trim((new HTML5())->saveHTML($doc2->document()));
         self::assertEquals($expected,trim((new HTML5())->saveHTML($doc->document())));
     }
+
+    public function testMapToNonObjects() {
+        foreach(
+            QQ('<ul><li>a</li><li>b</li>')->find('> li')->get(asObject: true)->map(
+                fn($n, DOMElement $e) => [ 'text' => $e->textContent ]
+            ) as $v
+        )
+            self::assertIsArray($v);
+    }
+
+    public function testIsDepth() : void
+    {
+        $dom = html5qp('<p><span>foo</span></p>');
+        self::assertTrue($dom->is('p'), "Should match element held directly in the collection");
+        self::assertFalse($dom->is('span'), "Should not match a descendant of element held in the collection");
+    }
 }

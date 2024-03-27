@@ -7,6 +7,7 @@ use DOMElement as Element;
 use DOMWrap\Document;
 use DOMWrap\Text;
 use QueryPath\DOMQuery as DQ;
+use Throwable as Throwable;
 use Thunder\Shortcode\Shortcode\ParsedShortcode;
 
 final class Utility
@@ -345,7 +346,15 @@ final class Utility
     }
     public static function pasteOver(DQ $old, DQ $new) : void
     {
-        foreach($new as $node) $node->insertBefore($old->eq(0));
+        /** @var DQ $node */
+        foreach($new as $node) {
+            try {
+                $node->insertBefore($old->eq(0));
+            }
+            catch(Throwable $e) {
+                throw $e;
+            }
+        }
         $old->remove();
     }
 }

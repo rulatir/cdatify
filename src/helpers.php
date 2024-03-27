@@ -10,10 +10,12 @@ use FluentDOM\Query;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use QueryPath\DOMQuery;
+use QueryPath\QueryPath;
 use Rulatir\Cdatify\Shortcode\AskerOfQuestionsCLI;
 use Rulatir\Cdatify\Shortcode\ParameterTranslationDeciderAnswerFile;
 use Rulatir\Cdatify\Shortcode\ShortcodeConverter;
 use Rulatir\Cdatify\Utility;
+use Thunder\Shortcode\Parser\RegularParser;
 
 if (!function_exists('makeShortcodeConverter')) {
     function makeShortcodeConverter(bool $useLongTags=false) : ShortcodeConverter
@@ -21,6 +23,7 @@ if (!function_exists('makeShortcodeConverter')) {
         $configDir = getenv('HOME')."/.local/cdatify/shortcode-schemas";
         @mkdir($configDir, 0755, true);
         return new ShortcodeConverter(
+            new RegularParser(),
             new ParameterTranslationDeciderAnswerFile(
                 'zuu-cms-shortcodes',
                 new Filesystem(new LocalFilesystemAdapter($configDir)),
@@ -74,9 +77,23 @@ if (!function_exists('getParentElement')) {
 }
 
 if (!function_exists('QQ')) {
-     function QQ(string $html) : DOMQuery {
-         $id = 'cdatify-processing-container';
-         return html5qp("<section id=\"$id\">$html</section>")->find("#$id")->contents();
+     function QQ(null|string|DOMQuery|DOMNode|SplObjectStorage|array $that=null) : DOMQuery {
+         if (is_array($that)) {
+             $storage = new SplObjectStorage();
+             array_walk($that, fn(DOMNode $_) => $storage->attach($_));
+             return new DOMQuery($storage);
+         }
+         if (is_string($that)) {
+             $id = 'cdatify-processing-container';
+             return html5qp("<section id=\"$id\">$that</section>")->find("#$id")->contents();
+         }
+         if($that instanceof DOMQuery) {
+             return $that;
+         }
+         if ($that instanceof SplObjectStorage || $that instanceof DOMNode)    {
+             return new DOMQuery($that);
+         }
+         return new DOMQuery();
      }
 }
 

@@ -19,9 +19,23 @@ class NormalizeStarsTest extends TestCase
         ];
     }
 
+    public static function deleteStarsData() : array
+    {
+        return array_map(
+            fn($a) => [preg_replace('/<\/?md-star>/','',$a[0]),$a[1]],
+            self::starsData()
+        );
+    }
+
     #[DataProvider('starsData')]
     public function testNormalizeStars(string $expected, string $input) : void
     {
         self::assertEquals($expected, normalizeStars($input));
+    }
+
+    #[DataProvider('deleteStarsData')]
+    public function testDeleteStars(string $expected, string $input) : void
+    {
+        self::assertEquals($expected, normalizeStars($input, '%'));
     }
 }

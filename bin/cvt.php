@@ -2,12 +2,14 @@
 
 use Garden\Cli\Args;
 use Garden\Cli\Cli;
+use QueryPath\QueryPath;
+use Rulatir\Cdatify\QueryPath\MapTo;
 
 require __DIR__."/../vendor/autoload.php";
 
 function main(array $argv) : void
 {
-    ini_set('memory_limit','4G');
+    bootstrap();
     $args = createCLI()->parse($argv, true);
     $input = $args->getArg('input', '-');
     if ($input==='-') $input = 'php://stdin';
@@ -18,11 +20,21 @@ function main(array $argv) : void
     $result = ob_get_clean();
     error_reporting($oldER);
     if ('-'===$output) echo $result;
-    else file_put_contents($output, $result);
+    else {
+        @mkdir(dirname($output),0755,true);
+        file_put_contents($output, $result);
+    }
+}
+
+function bootstrap() : void
+{
+    ini_set('memory_limit','4G');
+    QueryPath::enable(MapTo::class);
 }
 
 function process(Args $args, string $inputString) : void
 {
+    echo "";
     echo match ($args->getCommand()) {
         "html"=>cmd_html($inputString, $args->getOpt('long-tags',false), $args->getOpt('merge-duplicates',false)),
         "xlf"=>cmd_xlf($inputString),
