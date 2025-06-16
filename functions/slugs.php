@@ -1,6 +1,7 @@
 <?php
 
 use Cocur\Slugify\Slugify;
+use Sarhan\Flatten\Flatten;
 
 function cmd_slugs(string $inputString) : string
 {
@@ -31,14 +32,16 @@ function cmd_slugs(string $inputString) : string
 
 function makeSlugifier(string $language, ?string $properNamesLanguage=null) : Slugify
 {
-    return new Slugify(['rulesets' => array_unique([
-        'default',
-        languageCodeToRuleSet($language),
-        languageCodeToRuleSet($properNamesLanguage ?? $language)
-    ])]);
+    $rulesets = [
+        ['default'],
+        [languageCodeToRuleSet($language)],
+        [languageCodeToRuleSet($properNamesLanguage ?? $language)]
+    ];
+
+    return new Slugify(['rulesets' => array_unique(array_filter((new Flatten())->flattenToArray($rulesets)))]);
 }
 
-function languageCodeToRuleSet(string $languageCode) : string {
+function languageCodeToRuleSet(string $languageCode) : string|array {
     return match(preg_split('/[-_]/',"$languageCode-")[0]) {
         'pl' => 'polish',
         'de' => 'german',
@@ -49,6 +52,8 @@ function languageCodeToRuleSet(string $languageCode) : string {
         'es' => 'spanish',
         'it' => 'italian',
         'lt' => 'lithuanian',
+        'ru' => 'russian',
+        'uk' => ['russian','ukrainian'],
         default => 'default'
     };
 }

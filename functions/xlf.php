@@ -41,15 +41,17 @@ function cmd_xlf(string $inputString) : string
     $dom = html5qp($inputString);
     $body = $dom->find('body');
     $useLongTags = 'yes' === $body->attr('data-long-tags');
-    $mergeDuplicates = 'yes' === $body->attr('data-merge-duplicates');
-    $original = $body->attr('data-original');
-    $sourceLanguage = $body->attr('data-source-language');
-    $targetLanguage = $body->attr('data-target-language');
-
     $shortcodeConverter = makeShortcodeConverter($useLongTags);
     $dom = html5qp($inputString);
     $items = $dom->find('body > section');
-    $data = $mergeDuplicates ? parseDuplicateSets($items) : parseItems($items);
+    [
+        'mergeDuplicates' => $mergeDuplicates,
+        'original' => $original,
+        'sourceLangauge' => $sourceLanguage,
+        'targetLanguage' => $targetLanguage,
+        'data' => $data
+    ] = parseTranslationHTML($inputString);
+
     $data = array_map(fn($item) => [
         ...$item,
         'value' => htmlspecialchars($shortcodeConverter->html2sc($item['value']))
@@ -62,3 +64,35 @@ function cmd_xlf(string $inputString) : string
     ]), $data]);
 }
 
+function parseTranslationHTML(string $inputString) : array
+{
+    $dom = html5qp($inputString);
+    $body = $dom->find('body');
+    $mergeDuplicates = 'yes' === $body->attr('data-merge-duplicates');
+    $original = $body->attr('data-original');
+    $sourceLanguage = $body->attr('data-source-language');
+    $targetLanguage = $body->attr('data-target-language') ?: withDefaultCountry($dom->find('html')->attr('lang'));
+    $useLongTags = 'yes' === $body->attr('use-long-tags');
+
+    $dom = html5qp($inputString);
+    $items = $dom->find('body > section');
+    return [
+        'mergeDuplicates' => $mergeDuplicates,
+        'original' => $original,
+        'sourceLangauge' => $sourceLanguage,
+        'targetLanguage' => $targetLanguage,
+        'useLongTags' => $useLongTags,
+        'data' => $mergeDuplicates ? parseDuplicateSets($items) : parseItems($items)
+    ];
+}
+
+function withDefaultCountry(string $language) : string
+{
+    [$lang, $country]= explode("-","$language--");
+    if ($country) return $language;
+    return "$lang-".match($lang) {
+        'cs' => 'CZ',
+        'en' => 'GB',
+        default => strtoupper($lang)
+    };
+}

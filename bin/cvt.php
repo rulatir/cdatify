@@ -30,6 +30,7 @@ function bootstrap() : void
 {
     ini_set('memory_limit','4G');
     QueryPath::enable(MapTo::class);
+
 }
 
 function process(Args $args, string $inputString) : void
@@ -45,6 +46,8 @@ function process(Args $args, string $inputString) : void
             require($args->getArg('source')),
             $args->getArg('source-lang')
         ),
+        "improvement"=>cmd_improvement($inputString, file_get_contents($args->getArg("better"))),
+        "whtml"=>cmd_whtml($inputString),
         default=>"Unknown command"
     };
 }
@@ -60,15 +63,27 @@ function createCLI() : Cli
         ->opt('long-tags:l','Use less abbreviated tag names when transcoding shortcodes to HTML',type: 'bool')
         ->opt('merge-duplicates:m', 'Merge duplicate strings',type: 'bool');
 
-    $cli->command('xlf')->description('Convert html to xlf');
+    $cli->command('xlf')
+        ->description('Convert html to xlf')
+        ->opt('target-locale:t', 'Target locale');
 
     $cli->command('slugs')->description('Generate slugs from titles');
 
-    $cli->command('fix-slugs')->description('Fix slugs using entire project as translation memory')
+    $cli->command('fix-slugs')
+        ->description('Fix slugs using entire project as translation memory')
         ->arg('input-lang','Input file language')
         ->arg('source','Source language file - a PHP file returning an array of key-value pairs')
         ->arg('source-lang','Source language')
         ->opt('dry-run:d','Dry run',type: 'bool');
+
+    $cli->command('improvement')
+        ->description('Produce a .xlf that only contains translation units whose translations or sources have changed')
+        ->arg('better', "Changed xlf file");
+
+    $cli->command('whtml')->description(
+        "Put a Loco HTML export into form that can be easily converted into a word metrics document"
+    );
+
     return $cli;
 }
 

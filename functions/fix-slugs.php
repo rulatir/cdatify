@@ -6,7 +6,8 @@ use JetBrains\PhpStorm\NoReturn;
 #[NoReturn]
 function cmd_fix_slugs(array $input, string $inputLang, array $source, string $sourceLang) : string
 {
-    $inputSlugifier = makeSlugifier($inputLang,$sourceLang);
+    $inputSlugifier = makeSlugifier($inputLang);
+    //xdebug_break();
     $sourceSlugifier = makeSlugifier($sourceLang);
 
     $slugifiedSource = [];

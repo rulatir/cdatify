@@ -6,11 +6,9 @@ use DOMWrap\Element;
 use DOMWrap\NodeList;
 use DOMWrap\ProcessingInstruction;
 use DOMWrap\Text;
-use FluentDOM\Query;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use QueryPath\DOMQuery;
-use QueryPath\QueryPath;
 use Rulatir\Cdatify\Shortcode\AskerOfQuestionsCLI;
 use Rulatir\Cdatify\Shortcode\ParameterTranslationDeciderAnswerFile;
 use Rulatir\Cdatify\Shortcode\ShortcodeConverter;
@@ -103,4 +101,7 @@ require_once __DIR__."/../functions/slugs.php";
 require_once __DIR__."/../functions/templates.php";
 require_once __DIR__."/../functions/templating.php";
 require_once __DIR__."/../functions/xlf.php";
+require_once __DIR__."/../functions/improvement.php";
+require_once __DIR__."/../functions/whtml.php";
+
 

@@ -21,6 +21,17 @@ final class Utility
         ));
     }
 
+    public static function outerHTML(DQ|\DOMElement $element): string {
+        $newDoc = new \DOMDocument;
+        if ($element instanceof DQ) {
+            $cloned = $element->get(0)->cloneNode(TRUE);
+        } else {
+            $cloned = $element->cloneNode(TRUE);
+        }
+        $newDoc->appendChild($newDoc->importNode($cloned,TRUE));
+        return $newDoc->saveHTML();
+    }
+
     public static function numeric_entities(string $str) : string
     {
         return preg_replace_callback(
@@ -356,5 +367,26 @@ final class Utility
             }
         }
         $old->remove();
+    }
+
+    public static function undocumentify(DQ $container): string
+    {
+        return $container->innerHTML5();
+    }
+
+    /**
+     * Loads string into document object, wrapping it in a document template if it is not already a full document.
+     * Returns the element that serves as the processing container for the content
+     * @param string $html
+     * @return DQ
+     */
+    public static function documentify(string $html): DQ
+    {
+        $isAlreadyADocument = str_starts_with(mb_strtoupper(mb_substr($html, 0, 50)), '<!DOCTYPE ');
+        $input =
+            $isAlreadyADocument
+                ? $html
+                : "<processing-container>$html</processing-container>";
+        return html5qp($input)->find($isAlreadyADocument ? 'body' : 'processing-container');
     }
 }

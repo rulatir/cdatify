@@ -39,7 +39,8 @@
         "scotteh/php-dom-wrapper": "^3.0",
         "matecat/xliff-parser": "dev-master",
         "ext-libxml": "*",
-        "gravitypdf/querypath": "^3.2"
+        "gravitypdf/querypath": "^3.2",
+        "sarhan/php-flatten": "^4.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^11",

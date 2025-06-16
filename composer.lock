@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "61f477b8aac081b82e790b5ea9092800",
+    "content-hash": "ee89345f87ece83ff5a1665d339793bf",
     "packages": [
         {
             "name": "adhocore/cli",
@@ -716,6 +716,56 @@
                 "source": "https://github.com/php-fig/log/tree/1.1.4"
             },
             "time": "2021-05-03T11:20:27+00:00"
+        },
+        {
+            "name": "sarhan/php-flatten",
+            "version": "v4.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/AlaaSarhan/php-flatten.git",
+                "reference": "7e619fe30a912051760d41f49dc454677db5abda"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/AlaaSarhan/php-flatten/zipball/7e619fe30a912051760d41f49dc454677db5abda",
+                "reference": "7e619fe30a912051760d41f49dc454677db5abda",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.1|^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^7.0|^8.0|^9.0",
+                "squizlabs/php_codesniffer": "^2.3|^3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Sarhan\\Flatten\\": "./src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-3.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "Alaa Sarhan",
+                    "email": "sarhan.alaa@protonmail.com"
+                }
+            ],
+            "description": "Flattens multidimensional arrays, traversables and vars into one dimensional array.",
+            "homepage": "https://github.com/AlaaSarhan/php-flatten",
+            "keywords": [
+                "array",
+                "arrays",
+                "flatten"
+            ],
+            "support": {
+                "issues": "https://github.com/AlaaSarhan/php-flatten/issues",
+                "source": "https://github.com/AlaaSarhan/php-flatten/tree/v4.0.1"
+            },
+            "time": "2023-12-02T13:39:32+00:00"
         },
         {
             "name": "scotteh/php-dom-wrapper",

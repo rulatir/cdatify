@@ -49,20 +49,20 @@ class ShortcodeConverter
     public function html2avat(?string $html) : ?string
     {
         if (null===$html) return null;
-        $container = $this->documentify($html);
+        $container = Utility::documentify($html);
         $this->avatifyChildren($container);
         $container->contents()->filterCallback(fn($n,$e)=>$e instanceof Text)->eachQ(function($n,$t){
             Utility::pasteOver($t, QQ(normalizeTextContentForTranslation($t->text())));
         });
-        return $this->undocumentify($container);
+        return Utility::undocumentify($container);
     }
 
     public function avat2html(?string $avat) : ?string
     {
         if (null===$avat) return null;
-        $container = $this->documentify($avat);
+        $container = Utility::documentify($avat);
         $this->unavatifyChildren($container);
-        $result = $this->undocumentify($container);
+        $result = Utility::undocumentify($container);
         return $result;
     }
 
@@ -148,7 +148,7 @@ class ShortcodeConverter
         foreach($shortcode->getParameters() as $paramName=>$value) {
             $params[] = $this->convertShortcodeParameter($name, $paramName, $shortcode->getText(), $value);
         }
-        return $this->renderConvertedShortcode($name, $params, $this->sc2html($shortcode->getContent()));
+        return $this->renderConvertedShortcode($name, $params, $this->sc2html($shortcode->getContent()), $shortcode->getText());
     }
 
     protected function convertShortcodeParameter(
@@ -172,41 +172,29 @@ class ShortcodeConverter
         return " <{$T['scparam']}> {$nameTag} {$valueTag} </{$T['scparam']}> ";
     }
 
-    protected function renderConvertedShortcode(string $name, array $convertedParams, ?string $convertedContent) : string
+    protected function renderConvertedShortcode(
+        string $name,
+        array $convertedParams,
+        ?string $convertedContent,
+        string $shortcodeText
+    ) : string
     {
         $T=$this->getTagMap();
+        $translate =
+            $convertedContent && $this->decider->shouldTranslateContent($name, $shortcodeText) ? "" : " translate=\"no\"";
         return implode("", array_filter([
             "<{$T['sc']}> <{$T['scname']} translate=\"no\">$name</{$T['scname']}> ",
             ...$convertedParams,
-            $convertedContent ? " <{$T['sccontent']}>$convertedContent</{$T['sccontent']}> " : null,
+            $convertedContent ? " <{$T['sccontent']}{$translate}>$convertedContent</{$T['sccontent']}> " : null,
             " </{$T['sc']}>"
         ]));
     }
 
-    /**
-     * Loads string into document object, wrapping it in a document template if it is not already a full document.
-     * Returns the element that serves as the processing container for the content
-     */
-    protected function documentify(string $html) : DQ
-    {
-        $isAlreadyADocument = str_starts_with(mb_strtoupper(mb_substr($html, 0, 50)), '<!DOCTYPE ');
-        $input =
-            $isAlreadyADocument
-                ? $html
-                : "<processing-container>$html</processing-container>";
-        return html5qp($input)->find($isAlreadyADocument ? 'body' : 'processing-container');
-    }
-
-    protected function undocumentify(DQ $container) : string
-    {
-        return $container->innerHTML5();
-    }
-
     public function html2sc(string $htmlWithEscapedShortcodes) : string
     {
-        $container = $this->documentify($htmlWithEscapedShortcodes);
+        $container = Utility::documentify($htmlWithEscapedShortcodes);
         $this->unconvertChildren($container);
-        $unconverted = $this->undocumentify($container);
+        $unconverted = Utility::undocumentify($container);
         return $this->avat2html($unconverted);
     }
 
