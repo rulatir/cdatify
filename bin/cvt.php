@@ -44,7 +44,9 @@ function process(Args $args, string $inputString) : void
             require($args->getArg('input')),
             $args->getArg('input-lang'),
             require($args->getArg('source')),
-            $args->getArg('source-lang')
+            $args->getArg('source-lang'),
+            $args->getOpt('loose-match', []),
+            $args->getOpt('problems', null)
         ),
         "improvement"=>cmd_improvement($inputString, file_get_contents($args->getArg("better"))),
         "whtml"=>cmd_whtml($inputString),
@@ -74,7 +76,9 @@ function createCLI() : Cli
         ->arg('input-lang','Input file language')
         ->arg('source','Source language file - a PHP file returning an array of key-value pairs')
         ->arg('source-lang','Source language')
-        ->opt('dry-run:d','Dry run',type: 'bool');
+        ->opt('dry-run:d','Dry run',type: 'bool')
+        ->opt('loose-match:l','Regex pattern with replacement (e.g., /^(#?)(?P<match>.*)(-all-\\d+)$/$1$T$2/). Named group "match" is compared, $T becomes target slug. Strict match is tried first. Include (#?) and $1 if you want hash preservation. Can be specified multiple times, first match wins.',type: 'string[]')
+        ->opt('problems:p','Write problem report to file');
 
     $cli->command('improvement')
         ->description('Produce a .xlf that only contains translation units whose translations or sources have changed')

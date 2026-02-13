@@ -20,12 +20,13 @@ function cmd_slugs(string $inputString) : string
         }
     }
     $file = $dom->getElementsByTagName('file')[0];
-    $slugifier = makeSlugifier($file->getAttribute('target-language'));
+    $targetLanguage = $file->getAttribute('target-language');
+    $slugifier = makeSlugifier($targetLanguage);
     /** @var DOMElement $slugElement */
     foreach($elements['.slug'] as $resKey => $slugElement) {
         $slugSource=$slugElement;
         foreach($slugSources as $slugSourceKey) if ($slugSource = $elements[$slugSourceKey][$resKey]) break;
-        $slugElement->textContent=$slugifier->slugify($slugSource->textContent);
+        $slugElement->textContent=$slugifier->slugify(preprocessApostrophes($slugSource->textContent, $targetLanguage));
     }
     return $dom->saveXML();
 }
@@ -39,6 +40,16 @@ function makeSlugifier(string $language, ?string $properNamesLanguage=null) : Sl
     ];
 
     return new Slugify(['rulesets' => array_unique(array_filter((new Flatten())->flattenToArray($rulesets)))]);
+}
+
+function preprocessApostrophes(string $text, string $language) : string
+{
+    // For English, remove word-internal apostrophes
+    $languageCode = preg_split('/[-_]/', "$language-")[0];
+    if ($languageCode === 'en') {
+        $text = preg_replace("/(?<=[a-zA-Z])['\'`'](?=[a-zA-Z])/u", '', $text);
+    }
+    return $text;
 }
 
 function languageCodeToRuleSet(string $languageCode) : string|array {
