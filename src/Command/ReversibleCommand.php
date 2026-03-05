@@ -2,7 +2,7 @@
 
 namespace Rulatir\Cdatify\Command;
 
-use Garden\Cli\Args;
+use Ahc\Cli\Input\Command as AhcCommand;
 use Rulatir\Cdatify\Command\Traits\DefaultSuffix;
 
 abstract class ReversibleCommand extends Command
@@ -10,9 +10,10 @@ abstract class ReversibleCommand extends Command
     use DefaultSuffix;
 
     protected bool $remove = false;
-    public function __construct(Args $args)
+    public function __construct(AhcCommand $args)
     {
-        $this->remove = $args->getOpt('remove', false);
+        $values = $args->values(true);
+        $this->remove = $values['remove'] ?? false;
         parent::__construct($args);
     }
 

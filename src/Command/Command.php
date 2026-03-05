@@ -6,18 +6,20 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
-use Garden\Cli\Args;
+use Ahc\Cli\Input\Command as AhcCommand;
 
 abstract class Command
 {
     protected string $inputSpec;
     protected string $outputSpec;
 
-    public function __construct(protected Args $args)
+    public function __construct(protected AhcCommand $args)
     {
-        $this->inputSpec = $args->getArg('input', '-');
+        $values = $this->args->values(true);
+        $pos = $this->args->args();
+        $this->inputSpec = $values['input'] ?? ($pos[0] ?? '-');
         $output = '-'===$this->inputSpec ? '-' : static::buildDefaultOutputPath($this->inputSpec);
-        $this->outputSpec = $args->getOpt('output',$output);
+        $this->outputSpec = $values['output'] ?? $output;
     }
 
     public function getInputSpec(): string
@@ -32,11 +34,11 @@ abstract class Command
 
     public abstract function transformTextNode(DOMDocument $dom, DOMElement $parent, DOMText $node) : ?DOMNode;
 
-    public static function make(Args $args) : Command
+    public static function make(AhcCommand $args) : Command
     {
-        $fqcn = preg_replace("~\\\\Command$~", '\\'.ucfirst(strtolower($args->getCommand())), self::class);
+        $fqcn = preg_replace("~\\\\Command$~", '\\'.ucfirst(strtolower($args->name())), self::class);
         if (!class_exists($fqcn)) {
-            throw new \RuntimeException("No class defined to handle {$args->getCommand()} command");
+            throw new \RuntimeException("No class defined to handle {$args->name()} command");
         }
         if (!is_a($fqcn, self::class, true)) {
             throw new \RuntimeException("$fqcn does not extend Command");

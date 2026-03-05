@@ -95,3 +95,28 @@ ITEM;
     return [str_replace(array_keys($substitutions), array_values($substitutions), $xlf), $item];
 }
 
+function sourceXlfTemplate(array $substitutions): array
+{
+    $xlf = <<<XLF
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 http://docs.oasis-open.org/xliff/v1.2/os/xliff-core-1.2-strict.xsd">
+  <file original="%%%original%%%" source-language="%%%source-language%%%" target-language="%%%target-language%%%" datatype="database" tool-id="loco">
+    <header>
+      <tool tool-id="loco" tool-name="Loco" tool-version="1.0.26 20220711-1" tool-company="Loco"></tool>
+    </header>
+    <body>
+      %%%ITEMS%%%
+    </body>
+  </file>
+</xliff>
+XLF;
+    $item = <<<ITEM
+      <trans-unit id="%%%id%%%" resname="%%%resname%%%" datatype="plaintext">
+        <source>%%%source%%%</source>
+        <target/>
+      </trans-unit>
+ITEM;
+
+    return [str_replace(array_keys($substitutions), array_values($substitutions), $xlf), $item];
+}
+

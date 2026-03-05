@@ -1,94 +1,128 @@
 <?php
 
-use Garden\Cli\Args;
-use Garden\Cli\Cli;
+use Ahc\Cli\Application;
+use Ahc\Cli\Input\Command as AhcCommand;
 use QueryPath\QueryPath;
 use Rulatir\Cdatify\QueryPath\MapTo;
 
-require __DIR__."/../vendor/autoload.php";
+require __DIR__ . '/../vendor/autoload.php';
 
-function main(array $argv) : void
+function main(array $argv): void
 {
     bootstrap();
-    $args = createCLI()->parse($argv, true);
-    $input = $args->getArg('input', '-');
-    if ($input==='-') $input = 'php://stdin';
-    $output = $args->getOpt('output','-');
+
+    $app = createCLI();
+    $cmd = $app->parse($argv);
+
+    $values = $cmd->values(true);
+    $pos = $cmd->args();
+    $input = $values['input'] ?? ($pos[0] ?? '-');
+    $inputPath = $input === '-' ? 'php://stdin' : $input;
+    $output = $values['output'] ?? '-';
+
     $oldER = error_reporting(E_ERROR);
     ob_start();
-    process($args, file_get_contents($input));
+    process($cmd, file_get_contents($inputPath));
     $result = ob_get_clean();
     error_reporting($oldER);
-    if ('-'===$output) echo $result;
-    else {
-        @mkdir(dirname($output),0755,true);
+
+    if ('-' === $output) {
+        echo $result;
+    } else {
+        @mkdir(dirname($output), 0755, true);
         file_put_contents($output, $result);
     }
 }
 
-function bootstrap() : void
+function bootstrap(): void
 {
-    ini_set('memory_limit','4G');
+    ini_set('memory_limit', '4G');
     QueryPath::enable(MapTo::class);
-
 }
 
-function process(Args $args, string $inputString) : void
+function process(AhcCommand $cmd, string $inputString): void
 {
     echo "";
-    echo match ($args->getCommand()) {
-        "html"=>cmd_html($inputString, $args->getOpt('long-tags',false), $args->getOpt('merge-duplicates',false)),
-        "xlf"=>cmd_xlf($inputString),
-        "slugs"=>cmd_slugs($inputString),
-        "fix-slugs"=>cmd_fix_slugs(
-            require($args->getArg('input')),
-            $args->getArg('input-lang'),
-            require($args->getArg('source')),
-            $args->getArg('source-lang'),
-            $args->getOpt('loose-match', []),
-            $args->getOpt('problems', null)
+
+    $valuesAccessor = fn() => $cmd->values(true);
+    $argsAccessor = fn() => $cmd->args();
+
+    $getOpt = function (string $name, $default = null) use ($valuesAccessor) {
+        $values = $valuesAccessor();
+        $key = lcfirst(str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $name))));
+        return $values[$key] ?? $default;
+    };
+
+    $getArg = function (string $name, $default = null) use ($valuesAccessor, $argsAccessor) {
+        $values = $valuesAccessor();
+        $key = lcfirst(str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $name))));
+        if (array_key_exists($key, $values)) return $values[$key];
+        $pos = $argsAccessor();
+        return $pos[0] ?? $default;
+    };
+
+    echo match ($cmd->name()) {
+        'html' => cmd_html(
+            $inputString,
+            $getOpt('long-tags', false),
+            $getOpt('merge-duplicates', false),
+            $getOpt('code', null)
         ),
-        "improvement"=>cmd_improvement($inputString, file_get_contents($args->getArg("better"))),
-        "whtml"=>cmd_whtml($inputString),
-        default=>"Unknown command"
+        'xlf' => cmd_xlf($inputString),
+        'slugs' => cmd_slugs($inputString),
+        'fix-slugs' => cmd_fix_slugs(
+            require($getArg('input')),
+            $getArg('input-lang'),
+            require($getArg('source')),
+            $getArg('source-lang'),
+            (function () use ($getOpt) { $v = $getOpt('loose-match', []); return is_array($v) ? $v : ($v === null ? [] : [$v]); })(),
+            $getOpt('problems', null)
+        ),
+        'improvement' => cmd_improvement($inputString, file_get_contents($getArg('better'))),
+        'whtml' => cmd_whtml($inputString),
+        default => 'Unknown command',
     };
 }
 
-function createCLI() : Cli
+function createCLI(): Application
 {
-    $cli = new Cli;
-    $cli->description("Convert xlf to html and back for Amazon Translate")
-        ->arg('input','Input file (- for stdin, default)')
-        ->opt('output:o','Output file (- for stdout, default)');
+    $app = new Application('cdatify');
 
-    $cli->command('html')->description('Convert xlf to html')
-        ->opt('long-tags:l','Use less abbreviated tag names when transcoding shortcodes to HTML',type: 'bool')
-        ->opt('merge-duplicates:m', 'Merge duplicate strings',type: 'bool');
+    $app->command('html', 'Convert xlf to html')
+        ->argument('[input]', 'Input file (- for stdin, default)')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)')
+        ->option('-l, --long-tags', 'Use less abbreviated tag names when transcoding shortcodes to HTML')
+        ->option('-m, --merge-duplicates', 'Merge duplicate strings')
+        ->option('-c, --code [file]', 'Output file for code-only (non-NL) strings as XLF');
 
-    $cli->command('xlf')
-        ->description('Convert html to xlf')
-        ->opt('target-locale:t', 'Target locale');
+    $app->command('xlf', 'Convert html to xlf')
+        ->argument('[input]', 'Input file (- for stdin, default)')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)')
+        ->option('-t, --target-locale [locale]', 'Target locale');
 
-    $cli->command('slugs')->description('Generate slugs from titles');
+    $app->command('slugs', 'Generate slugs from titles')
+        ->argument('[input]', 'Input file (- for stdin, default)')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)');
 
-    $cli->command('fix-slugs')
-        ->description('Fix slugs using entire project as translation memory')
-        ->arg('input-lang','Input file language')
-        ->arg('source','Source language file - a PHP file returning an array of key-value pairs')
-        ->arg('source-lang','Source language')
-        ->opt('dry-run:d','Dry run',type: 'bool')
-        ->opt('loose-match:l','Regex pattern with replacement (e.g., /^(#?)(?P<match>.*)(-all-\\d+)$/$1$T$2/). Named group "match" is compared, $T becomes target slug. Strict match is tried first. Include (#?) and $1 if you want hash preservation. Can be specified multiple times, first match wins.',type: 'string[]')
-        ->opt('problems:p','Write problem report to file');
+    $app->command('fix-slugs', 'Fix slugs using entire project as translation memory')
+        ->argument('[input]', 'Input mapping PHP file or path')
+        ->argument('<input-lang>', 'Input file language')
+        ->argument('<source>', 'Source language file - a PHP file returning an array of key-value pairs')
+        ->argument('<source-lang>', 'Source language')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)')
+        ->option('-d, --dry-run', 'Dry run')
+        ->option('-l, --loose-match [pattern]', 'Regex pattern with replacement (can be specified multiple times)')
+        ->option('-p, --problems [file]', 'Write problem report to file');
 
-    $cli->command('improvement')
-        ->description('Produce a .xlf that only contains translation units whose translations or sources have changed')
-        ->arg('better', "Changed xlf file");
+    $app->command('improvement', 'Produce a .xlf that only contains translation units whose translations or sources have changed')
+        ->argument('<better>', 'Changed xlf file')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)');
 
-    $cli->command('whtml')->description(
-        "Put a Loco HTML export into form that can be easily converted into a word metrics document"
-    );
+    $app->command('whtml', 'Put a Loco HTML export into form that can be easily converted into a word metrics document')
+        ->argument('[input]', 'Input file (- for stdin, default)')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)');
 
-    return $cli;
+    return $app;
 }
 
 main($argv);

@@ -6,13 +6,13 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
-use Garden\Cli\Args;
+use Ahc\Cli\Input\Command as AhcCommand;
 use Rulatir\Cdatify\Command\Traits\DefaultSuffix;
 
 class Cdata extends Command
 {
     use DefaultSuffix;
-    public function __construct(Args $args)
+    public function __construct(AhcCommand $args)
     {
         parent::__construct($args);
     }
