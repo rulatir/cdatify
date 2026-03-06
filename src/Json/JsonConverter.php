@@ -159,10 +159,11 @@ class JsonConverter
     protected function htmlToObject(DQ $element): array
     {
         $result = [];
-        $element->find('> hj-kv')->each(function ($index, $kv) use (&$result) {
+        // Use ->children() not ->find('>') to avoid QueryPath bug with nested elements
+        $element->children('hj-kv')->each(function ($index, $kv) use (&$result) {
             $kvElement = QQ($kv);
-            $key = $kvElement->find('> hj-k')->text();
-            $valueElement = $kvElement->find('> hj-v')->children()->first();
+            $key = $kvElement->children('hj-k')->text();
+            $valueElement = $kvElement->children('hj-v')->children()->first();
             $result[$key] = $this->htmlToValue($valueElement);
         });
         return $result;
