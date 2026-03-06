@@ -32,15 +32,36 @@ function cmd_html(
 
     $shortcodeConverter = makeShortcodeConverter($useLongTags);
 
+    // Create JSON converters for registered patterns
+    $jsonConverters = [];
+    foreach (JSON_CONVERSION_REGISTRY as [$pattern, $schemeName]) {
+        $jsonConverters[] = [
+            'pattern' => $pattern,
+            'converter' => makeJsonConverter($schemeName)
+        ];
+    }
+
     // Convert all units and check for natural language content
     $units = array_map(
-        function ($unit) use ($shortcodeConverter, $noNlHeuristics, $inclusionRegexes, $exclusionRegexes) {
+        function ($unit) use ($shortcodeConverter, $jsonConverters, $noNlHeuristics, $inclusionRegexes, $exclusionRegexes) {
             $originalSource = htmlspecialchars_decode($unit['source']['raw-content']);
-            $convertedHtml = $shortcodeConverter->sc2html($originalSource);
+            $resname = $unit['attr']['resname'];
+
+            // Check if this unit needs JSON conversion
+            $textToConvert = $originalSource;
+            foreach ($jsonConverters as ['pattern' => $pattern, 'converter' => $converter]) {
+                if (preg_match($pattern, $resname)) {
+                    $textToConvert = $converter->json2html($textToConvert);
+                    break;
+                }
+            }
+
+            // Then apply shortcode conversion
+            $convertedHtml = $shortcodeConverter->sc2html($textToConvert);
             echo "";
             return [
                 'id' => $unit['attr']['id'],
-                'resname' => $unit['attr']['resname'],
+                'resname' => $resname,
                 'originalSource' => $originalSource,
                 'value' => $convertedHtml,
                 'hasNL' => containsNaturalLanguage(

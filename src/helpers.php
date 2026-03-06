@@ -9,11 +9,21 @@ use DOMWrap\Text;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use QueryPath\DOMQuery;
+use Rulatir\Cdatify\Json\JsonConverter;
+use Rulatir\Cdatify\Json\JsonPathTranslationDeciderAnswerFile;
 use Rulatir\Cdatify\Shortcode\AskerOfQuestionsCLI;
 use Rulatir\Cdatify\Shortcode\ParameterTranslationDeciderAnswerFile;
 use Rulatir\Cdatify\Shortcode\ShortcodeConverter;
 use Rulatir\Cdatify\Utility;
 use Thunder\Shortcode\Parser\RegularParser;
+
+// JSON conversion registry: maps resname patterns to answer file stems
+// Each entry: [regex pattern for resname, answer file basename]
+if (!defined('JSON_CONVERSION_REGISTRY')) {
+    define('JSON_CONVERSION_REGISTRY', [
+        ['/\.seo\.schemaJson$/', 'json-schema-seo']
+    ]);
+}
 
 if (!function_exists('makeShortcodeConverter')) {
     function makeShortcodeConverter(bool $useLongTags=false) : ShortcodeConverter
@@ -28,6 +38,21 @@ if (!function_exists('makeShortcodeConverter')) {
                 new AskerOfQuestionsCLI()
             ),
             $useLongTags
+        );
+    }
+}
+
+if (!function_exists('makeJsonConverter')) {
+    function makeJsonConverter(string $schemeName) : JsonConverter
+    {
+        $configDir = getenv('HOME')."/.local/cdatify/json-schemas";
+        @mkdir($configDir, 0755, true);
+        return new JsonConverter(
+            new JsonPathTranslationDeciderAnswerFile(
+                $schemeName,
+                new Filesystem(new LocalFilesystemAdapter($configDir)),
+                new AskerOfQuestionsCLI()
+            )
         );
     }
 }

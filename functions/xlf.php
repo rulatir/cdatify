@@ -54,10 +54,34 @@ function cmd_xlf(string $inputString) : string
         'data' => $data
     ] = parseTranslationHTML($inputString);
 
-    $data = array_map(fn($item) => [
-        ...$item,
-        'value' => htmlspecialchars($shortcodeConverter->html2sc($item['value']))
-    ],$data);
+    // Create JSON converters for registered patterns
+    $jsonConverters = [];
+    foreach (JSON_CONVERSION_REGISTRY as [$pattern, $schemeName]) {
+        $jsonConverters[] = [
+            'pattern' => $pattern,
+            'converter' => makeJsonConverter($schemeName)
+        ];
+    }
+
+    $data = array_map(function($item) use ($shortcodeConverter, $jsonConverters) {
+        // First convert from shortcode HTML back to shortcodes
+        $converted = $shortcodeConverter->html2sc($item['value']);
+
+        // Then check if this needs JSON conversion back
+        $resname = $item['resname'];
+        foreach ($jsonConverters as ['pattern' => $pattern, 'converter' => $converter]) {
+            if (preg_match($pattern, $resname)) {
+                $converted = $converter->html2json($converted);
+                break;
+            }
+        }
+
+        return [
+            ...$item,
+            'value' => htmlspecialchars($converted)
+        ];
+    }, $data);
+
     /** @noinspection PhpParamsInspection */
     return renderTemplate(...[...xlfTemplate([
         '%%%original%%%' => $original,
