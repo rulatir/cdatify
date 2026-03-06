@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1048f9671edd74ec8902654825452f34",
+    "content-hash": "291f2c7b8259ea7185d2f2bce1239b88",
     "packages": [
         {
             "name": "adhocore/cli",
@@ -722,6 +722,127 @@
                 "source": "https://github.com/mschop/simplified-isolator/tree/v0.1.0"
             },
             "time": "2022-02-20T11:47:35+00:00"
+        },
+        {
+            "name": "nitotm/efficient-language-detector",
+            "version": "v3.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nitotm/efficient-language-detector.git",
+                "reference": "f20a5aa1773586744b47e00c53a56e39b0c33ab4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nitotm/efficient-language-detector/zipball/f20a5aa1773586744b47e00c53a56e39b0c33ab4",
+                "reference": "f20a5aa1773586744b47e00c53a56e39b0c33ab4",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^7.4 || ^8.0"
+            },
+            "bin": [
+                "bin/eld",
+                "bin/eld-php"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nitotm\\Eld\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Nito T.M.",
+                    "homepage": "https://github.com/nitotm"
+                }
+            ],
+            "description": "Fast and accurate natural language detection. Detector written in PHP. Nito-ELD, ELD.",
+            "homepage": "https://github.com/nitotm/efficient-language-detector",
+            "keywords": [
+                "detection",
+                "detector",
+                "language",
+                "language classification",
+                "language detection",
+                "language detector",
+                "language identification",
+                "language recognition"
+            ],
+            "support": {
+                "issues": "https://github.com/nitotm/efficient-language-detector/issues",
+                "source": "https://github.com/nitotm/efficient-language-detector/tree/v3.1.1"
+            },
+            "funding": [
+                {
+                    "url": "https://linktr.ee/nitotm",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/nitotm",
+                    "type": "github"
+                },
+                {
+                    "url": "https://ko-fi.com/nitotm",
+                    "type": "ko_fi"
+                }
+            ],
+            "time": "2026-01-12T10:51:25+00:00"
+        },
+        {
+            "name": "patrickschur/language-detection",
+            "version": "v5.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/patrickschur/language-detection.git",
+                "reference": "df8d32021b2ef9fde52e6fcccb83e3806822c9c6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/patrickschur/language-detection/zipball/df8d32021b2ef9fde52e6fcccb83e3806822c9c6",
+                "reference": "df8d32021b2ef9fde52e6fcccb83e3806822c9c6",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "php": "^7.4 || ^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LanguageDetection\\": "src/LanguageDetection"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Patrick Schur",
+                    "email": "patrick_schur@outlook.de"
+                }
+            ],
+            "description": "A language detection library for PHP. Detects the language from a given text string.",
+            "homepage": "https://github.com/patrickschur/language-detection",
+            "keywords": [
+                "detect",
+                "detection",
+                "language"
+            ],
+            "support": {
+                "issues": "https://github.com/patrickschur/language-detection/issues",
+                "source": "https://github.com/patrickschur/language-detection/tree/v5.3.1"
+            },
+            "time": "2025-03-25T22:47:08+00:00"
         },
         {
             "name": "psr/log",
