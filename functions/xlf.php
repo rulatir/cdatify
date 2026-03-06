@@ -4,16 +4,18 @@ use QueryPath\DOMQuery;
 use QueryPath\DOMQuery as DQ;
 use Rulatir\Cdatify\Utility as Util;
 
-function parseItems(array $items) : array
+function parseItems(DQ $items) : array
 {
-    return array_map(
-        fn(DOMQuery $item) : array => [
+    $result = [];
+    $items->each(function($n, DOMElement $item_) use(&$result) {
+        $item = QQ($item_);
+        $result[] = [
             'id' => $item->attr('data-loco-id'),
             'resname' => $item->attr('data-resname'),
             'value' => Util::numeric_entities($item->innerHTML5())
-        ],
-        $items
-    );
+        ];
+    });
+    return $result;
 }
 
 function parseDuplicateSets(DQ $duplicateSets) : array

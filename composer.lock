@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "291f2c7b8259ea7185d2f2bce1239b88",
+    "content-hash": "b80cf8777d75ee459fd5b98973d92e2e",
     "packages": [
         {
             "name": "adhocore/cli",
@@ -208,21 +208,21 @@
         },
         {
             "name": "gravitypdf/querypath",
-            "version": "3.2.3",
+            "version": "4.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GravityPDF/querypath.git",
-                "reference": "e4b11dc1e713a405c8dee570c515affe9c04f232"
+                "reference": "32b08b5b5295fa3b84baeb91685c66ca86b1c591"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GravityPDF/querypath/zipball/e4b11dc1e713a405c8dee570c515affe9c04f232",
-                "reference": "e4b11dc1e713a405c8dee570c515affe9c04f232",
+                "url": "https://api.github.com/repos/GravityPDF/querypath/zipball/32b08b5b5295fa3b84baeb91685c66ca86b1c591",
+                "reference": "32b08b5b5295fa3b84baeb91685c66ca86b1c591",
                 "shasum": ""
             },
             "require": {
                 "masterminds/html5": "^2.0",
-                "php": "^7.1 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0"
+                "php": "^7.1 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0"
             },
             "replace": {
                 "arthurkushman/query-path": "3.1.4",
@@ -268,7 +268,7 @@
                     "type": "paypal"
                 }
             ],
-            "time": "2023-12-01T05:41:42+00:00"
+            "time": "2025-02-04T05:00:04+00:00"
         },
         {
             "name": "league/flysystem",
