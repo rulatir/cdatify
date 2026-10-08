@@ -338,6 +338,12 @@ function isTextContentNaturalLanguage(string $text, array $inclusionRegexes = []
         return false; // URLs are not natural language
     }
 
+    // A word with trailing punctuation is a label ("tel:", "ul.", "godz."),
+    // which the token check below would call generated
+    if (preg_match('/^\p{L}+\p{P}+$/u', $text)) {
+        return true;
+    }
+
     // Check if text looks like a strong password/ID/token
     if (looksLikeStrongPassword($text)) {
         return false; // High-entropy tokens are not natural language

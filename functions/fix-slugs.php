@@ -180,39 +180,26 @@ function cmd_fix_slugs(array $target, string $targetLang, array $source, string 
                 continue;
             }
 
-            // Check if target translations all slugify to a common value
-            $commonTargetCore = null;
-            $mismatchReason = null;
-
+            // Slugify the non-empty target translations; they must all agree
+            $targetCores = [];
             foreach ($titleKeys as $titleKey) {
-                $targetValue = $target[$titleKey] ?? null;
-                if ($targetValue === null) {
-                    $mismatchReason = 'missing_translation';
-                    $commonTargetCore = null;
-                    break 2; // Missing translation - skip this slug entirely
-                }
-                $targetCore = $targetSlugifier->slugify(preprocessApostrophes($targetValue, $targetLang));
-
-                if ($commonTargetCore === null) {
-                    // First iteration
-                    $commonTargetCore = $targetCore;
-                } elseif ($commonTargetCore !== $targetCore) {
-                    // Mismatch - not all titles slugify to same core
-                    $mismatchReason = 'ambiguous_translations';
-                    $commonTargetCore = null;
-                    break 2; // Skip this slug entirely
-                }
+                $targetValue = trim($target[$titleKey] ?? '');
+                if ($targetValue === '') continue;
+                $targetCores[$targetSlugifier->slugify(preprocessApostrophes($targetValue, $targetLang))] = true;
             }
 
-            if ($commonTargetCore !== null) {
-                // Unambiguous - all titles slugify to same target core
-                $target[$slugKey] = renderSlugTemplate($commonTargetCore, $slugMatches, $slugTemplate);
+            if (count($targetCores) === 1) {
+                $target[$slugKey] = renderSlugTemplate(array_key_first($targetCores), $slugMatches, $slugTemplate);
                 $processedSlugs[$slugKey] = true;
                 $replaced = true;
                 break; // Found a matching rule, stop trying other rules
-            } elseif (!$replaced && $problemsFile !== null && $mismatchReason !== null) {
+            }
+
+            $mismatchReason = count($targetCores) === 0 ? 'missing_translation' : 'ambiguous_translations';
+            if ($problemsFile !== null) {
                 $problems[$slugKey] = ['reason' => $mismatchReason, 'core' => $slugCore];
             }
+            break; // Skip this slug entirely
         }
     }
 
