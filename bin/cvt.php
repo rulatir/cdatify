@@ -66,7 +66,8 @@ function process(AhcCommand $cmd, string $inputString): void
             $inputString,
             $getOpt('long-tags', false),
             $getOpt('merge-duplicates', false),
-            $getOpt('code', null)
+            $getOpt('code', null),
+            slugProblemsPath: $getOpt('slug-problems', null)
         ),
         'xlf' => cmd_xlf($inputString),
         'slugs' => cmd_slugs($inputString),
@@ -93,7 +94,8 @@ function createCLI(): Application
         ->option('-o, --output [file]', 'Output file (- for stdout, default)')
         ->option('-l, --long-tags', 'Use less abbreviated tag names when transcoding shortcodes to HTML')
         ->option('-m, --merge-duplicates', 'Merge duplicate strings')
-        ->option('-c, --code [file]', 'Output file for code-only (non-NL) strings as XLF');
+        ->option('-c, --code [file]', 'Output file for code-only (non-NL) strings as XLF')
+        ->option('-s, --slug-problems [file]', 'Write slugs with words that could not be turned back into text to file (JSON)');
 
     $app->command('xlf', 'Convert html to xlf')
         ->argument('[input]', 'Input file (- for stdin, default)')

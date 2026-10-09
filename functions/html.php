@@ -15,7 +15,8 @@ function cmd_html(
     ?string $codeOutputPath = null,
     array $noNlHeuristics = [],
     array $inclusionRegexes = [],
-    array $exclusionRegexes = []
+    array $exclusionRegexes = [],
+    ?string $slugProblemsPath = null
 ) : string
 {
     $parser = new XliffParser();
@@ -41,11 +42,45 @@ function cmd_html(
         ];
     }
 
+    $transUnits = array_merge(...array_map(fn($f) => array_values($f['trans-units']),$files));
+
+    // Slugs are turned back into source-language text before conversion, so a slug restored from a
+    // whole text gets the same value as that text and lands in its duplicate set.
+    $sourceTexts = [];
+    foreach ($transUnits as $unit) {
+        $sourceTexts[$unit['attr']['resname']] = htmlspecialchars_decode($unit['source']['raw-content']);
+    }
+    $slugifier = makeSlugifier($sourceLanguage);
+    $slugIndex = slugTextIndex($sourceTexts, $slugifier, $sourceLanguage);
+    $slugProblems = [];
+
     // Convert all units and check for natural language content
     $units = array_map(
-        function ($unit) use ($shortcodeConverter, $jsonConverters, $noNlHeuristics, $inclusionRegexes, $exclusionRegexes) {
+        function ($unit) use ($shortcodeConverter, $jsonConverters, $noNlHeuristics, $inclusionRegexes, $exclusionRegexes,
+                              $sourceTexts, $slugifier, $slugIndex, $sourceLanguage, &$slugProblems) {
             $originalSource = htmlspecialchars_decode($unit['source']['raw-content']);
             $resname = $unit['attr']['resname'];
+
+            if (isSlugResname($resname) && '' !== trim($originalSource)) {
+                $restored = deslugify(
+                    trim($originalSource),
+                    $sourceTexts[ownTitleResname($resname)] ?? null,
+                    $slugIndex,
+                    $slugifier,
+                    $sourceLanguage
+                );
+                if ($restored['unresolved']) {
+                    $slugProblems[] = ['resname' => $resname, 'slug' => $originalSource, ...$restored];
+                }
+                return [
+                    'id' => $unit['attr']['id'],
+                    'resname' => $resname,
+                    'originalSource' => $originalSource,
+                    'value' => $shortcodeConverter->sc2html($restored['text']),
+                    'directive' => slugDirectiveAttributes($restored['prefix']),
+                    'hasNL' => true
+                ];
+            }
 
             // Check if this unit needs JSON conversion
             $textToConvert = $originalSource;
@@ -64,6 +99,7 @@ function cmd_html(
                 'resname' => $resname,
                 'originalSource' => $originalSource,
                 'value' => $convertedHtml,
+                'directive' => '',
                 'hasNL' => containsNaturalLanguage(
                     $originalSource,
                     $convertedHtml,
@@ -73,8 +109,13 @@ function cmd_html(
                 )
             ];
         },
-        array_merge(...array_map(fn($f) => array_values($f['trans-units']),$files))
+        $transUnits
     );
+
+    if ($slugProblemsPath !== null) {
+        @mkdir(dirname($slugProblemsPath), 0755, true);
+        file_put_contents($slugProblemsPath, json_encode($slugProblems, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
 
     // Split units by NL presence
     $nlUnits = array_values(array_filter($units, fn($u) => $u['hasNL']));
@@ -106,7 +147,8 @@ function cmd_html(
     $nlUnitsForHtml = array_map(fn($u) => [
         'id' => $u['id'],
         'resname' => $u['resname'],
-        'value' => $u['value']
+        'value' => $u['value'],
+        'directive' => $u['directive']
     ], $nlUnits);
 
     $templateParams = [
@@ -132,7 +174,7 @@ function mergeDuplicates(array $items) : array
             'IDS' => [],
             'value' => $v
         ];
-        $merged[$key]['IDS'][]=['id'=>$item['id'],'resname'=>$item['resname']];
+        $merged[$key]['IDS'][]=['id'=>$item['id'],'resname'=>$item['resname'],'directive'=>$item['directive'] ?? ''];
     }
     return $merged;
 }

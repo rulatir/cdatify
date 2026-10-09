@@ -23,7 +23,7 @@ function htmlTemplate(array $substitutions=[]) : array
 HTML;
 
     $item=<<<ITEM
-        <section data-loco-id="%%%id%%%" data-resname="%%%resname%%%">%%%value%%%</section>
+        <section data-loco-id="%%%id%%%" data-resname="%%%resname%%%"%%%directive%%%>%%%value%%%</section>
 ITEM;
     return [str_replace(array_keys($substitutions), array_values($substitutions), $html), $item];
 }
@@ -60,7 +60,7 @@ HTML;
 ITEM;
 
     $id = <<<ID
-    <li data-loco-id="%%%id%%%" data-resname="%%%resname%%%"></li>
+    <li data-loco-id="%%%id%%%" data-resname="%%%resname%%%"%%%directive%%%></li>
 ID;
 
     [$k,$v] = [array_keys($substitutions),array_values($substitutions)];

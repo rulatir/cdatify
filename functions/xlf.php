@@ -12,6 +12,9 @@ function parseItems(DQ $items) : array
         $result[] = [
             'id' => $item->attr('data-loco-id'),
             'resname' => $item->attr('data-resname'),
+            'directive' => slugDirectiveOf($item_),
+            'transform' => $item_->getAttribute('data-transform'),
+            'prefix' => $item_->getAttribute('data-prefix'),
             'value' => Util::numeric_entities($item->innerHTML5())
         ];
     });
@@ -28,6 +31,9 @@ function parseDuplicateSets(DQ $duplicateSets) : array
              $result[] = [
                  'id' => $id->getAttribute('data-loco-id'),
                  'resname' => $id->getAttribute('data-resname'),
+                 'directive' => slugDirectiveOf($id),
+                 'transform' => $id->getAttribute('data-transform'),
+                 'prefix' => $id->getAttribute('data-prefix'),
                  'value' => $value
              ];
         });
@@ -63,7 +69,7 @@ function cmd_xlf(string $inputString) : string
         ];
     }
 
-    $data = array_map(function($item) use ($shortcodeConverter, $jsonConverters) {
+    $data = array_map(function($item) use ($shortcodeConverter, $jsonConverters, $targetLanguage) {
         // First convert from shortcode HTML back to shortcodes
         $converted = $shortcodeConverter->html2sc($item['value']);
 
@@ -74,6 +80,11 @@ function cmd_xlf(string $inputString) : string
                 $converted = $converter->html2json($converted);
                 break;
             }
+        }
+
+        // Slugs were sent as text; the item's directive turns the translation back into a slug
+        if ('slugify' === $item['transform']) {
+            $converted = applySlugDirective($converted, $item['prefix'], $targetLanguage);
         }
 
         return [
