@@ -28,10 +28,31 @@ class FixSlugsTest extends TestCase
         $this->assertSame('narizeni', $this->run_($target, $source)['a.slug']);
     }
 
-    public function testAmbiguousNonEmptyTranslationsAreReported() : void
+    public function testOwnTitleWinsOverOtherTranslations() : void
     {
         $source = ['a.title' => 'Regulamin', 'a.slug' => 'regulamin', 'b.title' => 'Regulamin'];
         $target = ['a.title' => 'nařízení', 'a.slug' => 'režim', 'b.title' => 'pravidla'];
+        $this->assertSame('narizeni', $this->run_($target, $source)['a.slug']);
+    }
+
+    public function testOwnTitleKeepsHashPrefix() : void
+    {
+        $source = ['a.title' => 'Regulamin', 'a.slug' => '#regulamin'];
+        $target = ['a.title' => 'nařízení', 'a.slug' => '#režim'];
+        $this->assertSame('#narizeni', $this->run_($target, $source)['a.slug']);
+    }
+
+    public function testOtherTitlesAreUsedWhenOwnTitleDoesNotSlugifyToTheSlug() : void
+    {
+        $source = ['a.title' => 'Zasady', 'a.slug' => 'regulamin', 'b.title' => 'Regulamin'];
+        $target = ['a.title' => 'zásady', 'a.slug' => 'režim', 'b.title' => 'nařízení'];
+        $this->assertSame('narizeni', $this->run_($target, $source)['a.slug']);
+    }
+
+    public function testAmbiguousNonEmptyTranslationsAreReported() : void
+    {
+        $source = ['a.title' => 'Zasady', 'a.slug' => 'regulamin', 'b.title' => 'Regulamin', 'c.title' => 'Regulamin'];
+        $target = ['a.title' => 'zásady', 'a.slug' => 'režim', 'b.title' => 'nařízení', 'c.title' => 'pravidla'];
         $problems = tempnam(sys_get_temp_dir(), 'fs');
         $this->assertSame('režim', $this->run_($target, $source, $problems)['a.slug']);
         $report = json_decode(file_get_contents($problems), true);

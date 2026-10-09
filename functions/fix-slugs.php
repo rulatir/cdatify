@@ -89,8 +89,8 @@ function matchSlugRule(string $value, string $pattern, Slugify $slugifier, strin
 function renderSlugTemplate(string $targetCore, array $captures, string $template) : string
 {
     $replacements = ['$T' => $targetCore];
-    for ($i = 0; $i < count($captures); $i++) {
-        $replacements['$' . $i] = $captures[$i];
+    foreach ($captures as $i => $capture) {
+        if (is_int($i)) $replacements['$' . $i] = $capture;
     }
     uksort($replacements, fn($a, $b) => strlen($b) - strlen($a));
 
@@ -171,6 +171,21 @@ function cmd_fix_slugs(array $target, string $targetLang, array $source, string 
             }
 
             if ($slugCore === null) continue; // No valid core from this rule
+
+            // The same item's title comes first: if it slugifies to the core and has a translation, use it
+            $ownTitleKey = substr($slugKey, 0, -strlen('.slug')) . '.title';
+            $ownTitleTarget = trim($target[$ownTitleKey] ?? '');
+            if ($ownTitleTarget !== '' && isset($source[$ownTitleKey])
+                && $sourceSlugifier->slugify(preprocessApostrophes($source[$ownTitleKey], $sourceLang)) === $slugCore) {
+                $target[$slugKey] = renderSlugTemplate(
+                    $targetSlugifier->slugify(preprocessApostrophes($ownTitleTarget, $targetLang)),
+                    $slugMatches,
+                    $slugTemplate
+                );
+                $processedSlugs[$slugKey] = true;
+                $replaced = true;
+                break;
+            }
 
             $titleKeys = $titleKeysBySlugCore[$slugCore] ?? [];
             if (count($titleKeys) === 0) {
