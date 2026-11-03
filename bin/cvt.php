@@ -7,6 +7,13 @@ use Rulatir\Cdatify\QueryPath\MapTo;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+/**
+ * Commands that transform the contents of their input: `[input]` names a file,
+ * `-` or nothing means stdin. main() reads it for them. Every other command
+ * reads its own arguments by name and gets no input text.
+ */
+const INPUT_TEXT_COMMANDS = ['html', 'xlf', 'slugs', 'improvement', 'whtml'];
+
 function main(array $argv): void
 {
     bootstrap();
@@ -16,13 +23,17 @@ function main(array $argv): void
 
     $values = $cmd->values(true);
     $pos = $cmd->args();
-    $input = $values['input'] ?? ($pos[0] ?? '-');
-    $inputPath = $input === '-' ? 'php://stdin' : $input;
     $output = $values['output'] ?? '-';
+
+    $inputString = '';
+    if (in_array($cmd->name(), INPUT_TEXT_COMMANDS, true)) {
+        $input = $values['input'] ?? ($pos[0] ?? '-');
+        $inputString = file_get_contents($input === '-' ? 'php://stdin' : $input);
+    }
 
     $oldER = error_reporting(E_ERROR);
     ob_start();
-    process($cmd, file_get_contents($inputPath));
+    process($cmd, $inputString);
     $result = ob_get_clean();
     error_reporting($oldER);
 
@@ -79,6 +90,20 @@ function process(AhcCommand $cmd, string $inputString): void
             (function () use ($getOpt) { $v = $getOpt('loose-match', []); return is_array($v) ? $v : ($v === null ? [] : [$v]); })(),
             $getOpt('problems', null)
         ),
+        'apply-terms' => cmd_apply_terms(
+            require($getArg('input')),
+            $getArg('input-lang'),
+            require($getArg('source')),
+            $getArg('source-lang'),
+            $getOpt('problems', null)
+        ),
+        'collect' => cmd_collect(
+            $getArg('archive'),
+            $getOpt('source', 'pl'),
+            (function () use ($getOpt) { $v = $getOpt('loose-match', []); return is_array($v) ? $v : ($v === null ? [] : [$v]); })(),
+            $getOpt('dir', null) ?? dirname($getArg('archive')),
+            $getOpt('problems', null) ?? collectProblemsDir($getArg('archive'))
+        ),
         'improvement' => cmd_improvement($inputString, file_get_contents($getArg('better'))),
         'whtml' => cmd_whtml($inputString),
         default => 'Unknown command',
@@ -115,6 +140,21 @@ function createCLI(): Application
         ->option('-d, --dry-run', 'Dry run')
         ->option('-l, --loose-match [pattern]', 'Regex pattern with replacement (can be specified multiple times)')
         ->option('-p, --problems [file]', 'Write problem report to file');
+
+    $app->command('apply-terms', 'Apply the vocabulary ($CVT_VOCABULARY_DIR) to a translated mapping')
+        ->argument('[input]', 'Input mapping PHP file (the translation)')
+        ->argument('<input-lang>', 'Input file language')
+        ->argument('<source>', 'Source language file - a PHP file returning an array of key-value pairs')
+        ->argument('<source-lang>', 'Source language')
+        ->option('-o, --output [file]', 'Output file (- for stdout, default)')
+        ->option('-p, --problems [file]', 'Write units whose longer text keeps a known wrong rendering of a vocabulary phrase to file (JSON)');
+
+    $app->command('collect', 'Collect a translation from a Loco PHP export archive: apply-terms, then fix-slugs, for every locale but the source')
+        ->argument('<archive>', 'Loco PHP export (zip)')
+        ->option('-s, --source [lang]', 'Source language (default pl)')
+        ->option('-d, --dir [dir]', 'Directory for the collected <project>-<locale>.php files (default: the archive\'s directory)')
+        ->option('-l, --loose-match [pattern]', 'Regex pattern with replacement (can be specified multiple times)')
+        ->option('-p, --problems [dir]', 'Problem reports: fuzzy.json, <locale>.terms.json, <locale>.slugs.json (default <archive>.problems)');
 
     $app->command('improvement', 'Produce a .xlf that only contains translation units whose translations or sources have changed')
         ->argument('<better>', 'Changed xlf file')

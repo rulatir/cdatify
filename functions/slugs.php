@@ -42,6 +42,28 @@ function makeSlugifier(string $language, ?string $properNamesLanguage=null) : Sl
     return new Slugify(['rulesets' => array_unique(array_filter((new Flatten())->flattenToArray($rulesets)))]);
 }
 
+/**
+ * A slug without its words of one or two letters (`przyjecia-i-wesela` →
+ * `przyjecia-wesela`), for the fallback comparison of slugs: editors often drop
+ * conjunctions and prepositions when they write a slug by hand. Digits stay.
+ */
+function strongSlug(string $slug) : string
+{
+    return implode('-', array_filter(explode('-', $slug), fn($part) => !preg_match('/^\p{L}{1,2}$/u', $part)));
+}
+
+/**
+ * True when $text slugifies to $slug, or, as a fallback, when both have the
+ * same non-empty strongSlug().
+ */
+function slugifiesTo(string $text, string $slug, Slugify $slugifier, string $language) : bool
+{
+    $slugified = $slugifier->slugify(preprocessApostrophes($text, $language));
+    if ($slugified === $slug) return true;
+    $strong = strongSlug($slugified);
+    return '' !== $strong && $strong === strongSlug($slug);
+}
+
 function preprocessApostrophes(string $text, string $language) : string
 {
     // For English, remove word-internal apostrophes

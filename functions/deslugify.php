@@ -18,6 +18,7 @@ function ownTitleResname(string $slugResname) : string
 /**
  * Indexes the source texts of non-slug units for turning slugs back into text.
  * 'phrases': slugified text => [text => true], for texts without markup or shortcodes.
+ * 'strongPhrases': the same by strongSlug(), for the fallback.
  * 'words': slugified word => [lowercase word => true], for every word of every text.
  *
  * @param array<string,string> $textsByResname
@@ -25,13 +26,16 @@ function ownTitleResname(string $slugResname) : string
 function slugTextIndex(array $textsByResname, Slugify $slugifier, string $language) : array
 {
     $phrases = [];
+    $strongPhrases = [];
     $words = [];
     foreach ($textsByResname as $resname => $text) {
         if (isSlugResname($resname)) continue;
         $text = trim($text);
         if ('' === $text) continue;
         if (!preg_match('/[<\[]/', $text)) {
-            $phrases[$slugifier->slugify(preprocessApostrophes($text, $language))][$text] = true;
+            $slugified = $slugifier->slugify(preprocessApostrophes($text, $language));
+            $phrases[$slugified][$text] = true;
+            if ('' !== ($strong = strongSlug($slugified))) $strongPhrases[$strong][$text] = true;
         }
         $plain = strip_tags(preg_replace('/\[[^\[\]]*\]/u', ' ', $text));
         preg_match_all('/\p{L}+/u', $plain, $matches);
@@ -40,7 +44,7 @@ function slugTextIndex(array $textsByResname, Slugify $slugifier, string $langua
             $words[$slugifier->slugify($word)][$word] = true;
         }
     }
-    return ['phrases' => $phrases, 'words' => $words];
+    return ['phrases' => $phrases, 'strongPhrases' => $strongPhrases, 'words' => $words];
 }
 
 /**
@@ -59,11 +63,12 @@ function deslugify(string $slug, ?string $ownTitle, array $index, Slugify $slugi
     [, $prefix, $core] = $m;
 
     $ownTitle = trim($ownTitle ?? '');
-    if ('' !== $ownTitle && $slugifier->slugify(preprocessApostrophes($ownTitle, $language)) === $core) {
+    if ('' !== $ownTitle && slugifiesTo($ownTitle, $core, $slugifier, $language)) {
         return ['prefix' => $prefix, 'text' => $ownTitle, 'unresolved' => []];
     }
 
-    $phraseHits = $index['phrases'][$core] ?? [];
+    $phraseHits = $index['phrases'][$core]
+        ?? ('' === strongSlug($core) ? [] : ($index['strongPhrases'][strongSlug($core)] ?? []));
     if (1 === count($phraseHits)) {
         return ['prefix' => $prefix, 'text' => array_key_first($phraseHits), 'unresolved' => []];
     }

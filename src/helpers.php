@@ -120,6 +120,8 @@ if (!function_exists('QQ')) {
      }
 }
 
+require_once __DIR__."/../functions/apply-terms.php";
+require_once __DIR__."/../functions/collect.php";
 require_once __DIR__."/../functions/deslugify.php";
 require_once __DIR__."/../functions/fix-slugs.php";
 require_once __DIR__."/../functions/html.php";

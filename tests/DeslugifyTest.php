@@ -55,6 +55,25 @@ class DeslugifyTest extends TestCase
         $this->assertSame(['laka' => ['łąka', 'łaka'], 'zrodla' => []], $r['unresolved']);
     }
 
+    public function testOwnTitleMatchesASlugWithoutItsShortWords() : void
+    {
+        $r = $this->deslugify_('przyjecia-wesela', 'Przyjęcia i wesela', []);
+        $this->assertSame('Przyjęcia i wesela', $r['text']);
+    }
+
+    public function testWholeTextMatchesASlugWithoutItsShortWords() : void
+    {
+        $r = $this->deslugify_('pokoje-widokiem', 'Kontakt', ['b.title' => 'Pokoje z widokiem']);
+        $this->assertSame('Pokoje z widokiem', $r['text']);
+    }
+
+    public function testStrongSlugDropsOnlyShortWords() : void
+    {
+        $this->assertSame('przyjecia-wesela', strongSlug('przyjecia-i-wesela'));
+        $this->assertSame('pokoj-2', strongSlug('pokoj-2'));
+        $this->assertSame('', strongSlug('i-w-z'));
+    }
+
     public function testHashPrefixIsReturnedSeparately() : void
     {
         $r = $this->deslugify_('#pokoje', 'Pokoje', []);
